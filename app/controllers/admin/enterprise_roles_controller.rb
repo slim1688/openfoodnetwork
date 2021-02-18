@@ -1,5 +1,5 @@
 module Admin
-  class EnterpriseRolesController < ResourceController
+  class EnterpriseRolesController < Admin::ResourceController
     def index
       @enterprise_roles = EnterpriseRole.by_user_email
       @users = Spree::User.order('spree_users.email')
@@ -7,7 +7,7 @@ module Admin
     end
 
     def create
-      @enterprise_role = EnterpriseRole.new params[:enterprise_role]
+      @enterprise_role = EnterpriseRole.new enterprise_role_params
 
       if @enterprise_role.save
         render text: Api::Admin::EnterpriseRoleSerializer.new(@enterprise_role).to_json
@@ -21,6 +21,12 @@ module Admin
       @enterprise_role = EnterpriseRole.find params[:id]
       @enterprise_role.destroy
       render nothing: true
+    end
+
+    private
+
+    def enterprise_role_params
+      params.require(:enterprise_role).permit(:user_id, :enterprise_id)
     end
   end
 end

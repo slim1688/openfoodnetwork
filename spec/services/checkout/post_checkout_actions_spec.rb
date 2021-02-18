@@ -11,16 +11,31 @@ describe Checkout::PostCheckoutActions do
     let(:params) { { order: {} } }
     let(:current_user) { order.distributor.owner }
 
-    let(:reset_order_service) { instance_double(ResetOrderService) }
+    let(:reset_order_service) { instance_double(OrderCompletionReset) }
 
     before do
-      expect(ResetOrderService).to receive(:new).
+      expect(OrderCompletionReset).to receive(:new).
         with(controller, order).and_return(reset_order_service)
       expect(reset_order_service).to receive(:call)
     end
 
     it "resets the order" do
       postCheckoutActions.success(controller, params, current_user)
+    end
+
+    describe "setting customer terms_and_conditions_accepted_at" do
+      before { order.customer = build(:customer) }
+
+      it "does not set customer's terms_and_conditions to the current time if terms have not been accepted" do
+        postCheckoutActions.success(controller, params, current_user)
+        expect(order.customer.terms_and_conditions_accepted_at).to be_nil
+      end
+
+      it "sets customer's terms_and_conditions to the current time if terms have been accepted" do
+        params = { order: { terms_and_conditions_accepted: true } }
+        postCheckoutActions.success(controller, params, current_user)
+        expect(order.customer.terms_and_conditions_accepted_at).to_not be_nil
+      end
     end
 
     describe "setting the user default address" do
@@ -48,10 +63,10 @@ describe Checkout::PostCheckoutActions do
   end
 
   describe "#failure" do
-    let(:restart_checkout_service) { instance_double(RestartCheckout) }
+    let(:restart_checkout_service) { instance_double(OrderCheckoutRestart) }
 
     it "restarts the checkout process" do
-      expect(RestartCheckout).to receive(:new).with(order).and_return(restart_checkout_service)
+      expect(OrderCheckoutRestart).to receive(:new).with(order).and_return(restart_checkout_service)
       expect(restart_checkout_service).to receive(:call)
 
       postCheckoutActions.failure

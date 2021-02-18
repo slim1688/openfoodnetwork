@@ -1,14 +1,16 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature '
   As an Administrator
   I want to manage relationships between enterprises
 ', js: true do
-  include AuthenticationWorkflow
   include WebHelper
+  include AuthenticationHelper
 
   context "as a site administrator" do
-    before { quick_login_as_admin }
+    before { login_as_admin }
 
     scenario "listing relationships" do
       # Given some enterprises with relationships
@@ -24,10 +26,9 @@ feature '
 
       # Then I should see the relationships
       within('table#enterprise-relationships') do
-        expect(page).to have_relationship e1, e2, ['to add to order cycle']
-        expect(page).to have_relationship e2, e3, ['to manage products']
-        expect(page).to have_relationship e3, e4,
-                                          ['to add to order cycle', 'to manage products']
+        expect(page).to have_relationship e1, e2, 'to add to order cycle'
+        expect(page).to have_relationship e2, e3, 'to manage products'
+        expect_relationship_with_permissions e3, e4, ['to add to order cycle', 'to manage products']
       end
     end
 
@@ -48,7 +49,7 @@ feature '
 
       # Wait for row to appear since have_relationship doesn't wait
       expect(page).to have_selector 'tr', count: 2
-      expect(page).to have_relationship e1, e2, ['to add to order cycle', 'to add products to inventory', 'to edit profile']
+      expect_relationship_with_permissions e1, e2, ['to add to order cycle', 'to add products to inventory', 'to edit profile']
       er = EnterpriseRelationship.where(parent_id: e1, child_id: e2).first
       expect(er).to be_present
       expect(er.permissions.map(&:name)).to match_array ['add_to_order_cycle', 'edit_profile', 'create_variant_overrides']
@@ -77,7 +78,7 @@ feature '
       er = create(:enterprise_relationship, parent: e1, child: e2, permissions_list: [:add_to_order_cycle])
 
       visit admin_enterprise_relationships_path
-      expect(page).to have_relationship e1, e2, ['to add to order cycle']
+      expect(page).to have_relationship e1, e2, 'to add to order cycle'
 
       accept_alert do
         first("a.delete-enterprise-relationship").click
@@ -92,13 +93,13 @@ feature '
     let!(:d1) { create(:distributor_enterprise) }
     let!(:d2) { create(:distributor_enterprise) }
     let!(:d3) { create(:distributor_enterprise) }
-    let(:enterprise_user) { create_enterprise_user( enterprises: [d1] ) }
+    let(:enterprise_user) { create(:user, enterprises: [d1] ) }
 
     let!(:er1) { create(:enterprise_relationship, parent: d1, child: d2) }
     let!(:er2) { create(:enterprise_relationship, parent: d2, child: d1) }
     let!(:er3) { create(:enterprise_relationship, parent: d2, child: d3) }
 
-    before { quick_login_as enterprise_user }
+    before { login_as enterprise_user }
 
     scenario "enterprise user can only see relationships involving their enterprises" do
       visit admin_enterprise_relationships_path
@@ -117,9 +118,24 @@ feature '
 
   private
 
-  def have_relationship(parent, child, perms = [])
-    perms = perms.join(' ')
+  def have_relationship(parent, child, permission = "")
+    have_table_row [parent.name, 'permits', child.name, permission, '']
+  end
 
-    have_table_row [parent.name, 'permits', child.name, perms, '']
+  def expect_relationship_with_permissions(parent, child, permissions = [])
+    tr = find_relationship(parent, child)
+    td = tr.find('td:nth-child(4)')
+    permissions.each_with_index do |permission, index|
+      expect(td.find("li:nth-child(#{index + 1})").text).to eq permission
+    end
+  end
+
+  def find_relationship(parent, child)
+    page.all('tr').each do |tr|
+      return tr if tr.find('td:first-child').text == parent.name &&
+                   tr.find('td:nth-child(2)').text == "permits" &&
+                   tr.find('td:nth-child(3)').text == child.name
+    end
+    raise "relationship not found"
   end
 end

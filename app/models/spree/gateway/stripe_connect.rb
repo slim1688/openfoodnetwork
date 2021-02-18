@@ -7,8 +7,6 @@ module Spree
 
       validate :ensure_enterprise_selected
 
-      attr_accessible :preferred_enterprise_id
-
       def method_type
         'stripe'
       end
@@ -22,7 +20,7 @@ module Spree
       end
 
       def stripe_account_id
-        StripeAccount.find_by_enterprise_id(preferred_enterprise_id).andand.stripe_user_id
+        StripeAccount.find_by(enterprise_id: preferred_enterprise_id).andand.stripe_user_id
       end
 
       # NOTE: the name of this method is determined by Spree::Payment::Processing
@@ -31,6 +29,10 @@ module Spree
       rescue Stripe::StripeError => e
         # This will be an error caused by generating a stripe token
         failed_activemerchant_billing_response(e.message)
+      end
+
+      def charge_offline(money, creditcard, gateway_options)
+        purchase(money, creditcard, gateway_options)
       end
 
       # NOTE: the name of this method is determined by Spree::Payment::Processing

@@ -1,11 +1,7 @@
+# frozen_string_literal: true
+
 module OpenFoodNetwork
   module DelayedJobHelper
-    def run_job(job)
-      clear_jobs
-      Delayed::Job.enqueue job
-      flush_jobs
-    end
-
     # Process all pending Delayed jobs, keeping in mind jobs could spawn new
     # delayed job (so things might be added to the queue while processing)
     def flush_jobs(options = {})

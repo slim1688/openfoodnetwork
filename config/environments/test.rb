@@ -5,18 +5,16 @@ Openfoodnetwork::Application.configure do
   # test suite.  You never need to work with it otherwise.  Remember that
   # your test database is "scratch space" for the test suite and is wiped
   # and recreated between test runs.  Don't rely on the data there!
-  config.cache_classes = true
+  config.cache_classes = false
+
+  config.eager_load = false
 
   # Configure static asset server for tests with Cache-Control for performance
-  config.serve_static_assets = true
+  config.serve_static_files = true
   config.static_cache_control = "public, max-age=3600"
 
   # Separate cache stores when running in parallel
   config.cache_store = :file_store, Rails.root.join("tmp", "cache", "paralleltests#{ENV['TEST_ENV_NUMBER']}")
-
-
-  # Log error messages when you accidentally call methods on nil
-  config.whiny_nils = true
 
   # Show full error reports and disable caching
   config.consider_all_requests_local       = true
@@ -37,7 +35,7 @@ Openfoodnetwork::Application.configure do
 
   # Tests assume English text on the site.
   config.i18n.default_locale = "en"
-  config.i18n.available_locales = ['en', 'es']
+  config.i18n.available_locales = ['en', 'es', 'pt']
   config.i18n.fallbacks = [:en]
   I18n.locale = config.i18n.locale = config.i18n.default_locale
 
@@ -53,8 +51,9 @@ Openfoodnetwork::Application.configure do
   require 'open_food_network/rack_request_blocker'
   # Make sure the middleware is inserted first in middleware chain
   config.middleware.insert_before('ActionDispatch::Static', 'RackRequestBlocker')
+
+  config.active_job.queue_adapter = :test
 end
 
 # Allows us to use _url helpers in Rspec
 Rails.application.routes.default_url_options[:host] = 'test.host'
-Spree::Core::Engine.routes.default_url_options[:host] = 'test.host'

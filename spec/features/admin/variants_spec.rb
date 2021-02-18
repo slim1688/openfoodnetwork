@@ -1,42 +1,115 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature '
     As an admin
     I want to manage product variants
 ' do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include WebHelper
 
-  scenario "creating a new variant" do
-    # Given a product with a unit-related option type
-    product = create(:simple_product, variant_unit: "weight", variant_unit_scale: "1")
+  describe "new variant", js: true do
+    scenario "creating a new variant" do
+      # Given a product with a unit-related option type
+      product = create(:simple_product, variant_unit: "weight", variant_unit_scale: "1")
 
-    # When I create a variant on the product
-    login_to_admin_section
-    visit spree.admin_product_variants_path product
-    click_link 'New Variant'
+      # When I create a variant on the product
+      login_as_admin_and_visit spree.admin_product_variants_path product
+      click_link 'New Variant'
 
-    fill_in 'unit_value_human', with: '1'
-    fill_in 'variant_unit_description', with: 'foo'
-    click_button 'Create'
+      fill_in 'unit_value_human', with: '1'
+      fill_in 'variant_unit_description', with: 'foo'
+      click_button 'Create'
 
-    # Then the variant should have been created
-    expect(page).to have_content "Variant \"#{product.name}\" has been successfully created!"
+      # Then the variant should have been created
+      expect(page).to have_content "Variant \"#{product.name}\" has been successfully created!"
+    end
+
+    scenario "creating a new variant from product variant page with filter" do
+      # Given a product with a unit-related option type
+      product = create(:simple_product, variant_unit: "weight", variant_unit_scale: "1")
+      filter = { producerFilter: 2 }
+
+      # When I create a variant on the product
+      login_as_admin_and_visit spree.admin_product_variants_path(product, filter)
+
+      click_link 'New Variant'
+
+      uri = URI.parse(current_url)
+      expect("#{uri.path}?#{uri.query}").to eq spree.new_admin_product_variant_path(product, filter)
+
+      # Cancel link should include product filter
+      expected_cancel_url = Regexp.new(
+        Regexp.escape(spree.admin_product_variants_path(product, filter))
+      )
+      expect(page).to have_link(I18n.t('actions.cancel'), href: expected_cancel_url)
+    end
+  end
+
+  describe "viewing product variant" do
+    scenario "when the product page has a product filter" do
+      # Given a product with a unit-related option type
+      product = create(:simple_product, variant_unit: "weight", variant_unit_scale: "1")
+      filter = { producerFilter: 2 }
+
+      # When I create a variant on the product
+      login_as_admin_and_visit spree.admin_product_variants_path(product, filter)
+
+      visit spree.admin_product_variants_path(product, filter)
+
+      expected_new_url = Regexp.new(
+        Regexp.escape(spree.new_admin_product_variant_path(product, filter))
+      )
+      expect(page).to have_link("New Variant", href: expected_new_url)
+
+      expected_show_delete_url = Regexp.new(
+        Regexp.escape(spree.admin_product_variants_path(product, { deleted: 'on' }.merge(filter)))
+      )
+      expect(page).to have_link("Show Deleted", href: expected_show_delete_url)
+
+      # Variant link should include product filter
+      variant = product.variants.first
+
+      expected_edit_url = Regexp.new(
+        Regexp.escape(spree.edit_admin_product_variant_path(product, variant, filter))
+      )
+      expect(page).to have_link(I18n.t(:edit), href: expected_edit_url)
+
+      expected_delete_url = Regexp.new(
+        Regexp.escape(spree.admin_product_variant_path(product, variant, filter))
+      )
+      expect(page).to have_link(I18n.t(:delete), href: expected_delete_url)
+    end
   end
 
   describe "editing unit value and description for a variant", js: true do
+    scenario "when the product variant page has product filter" do
+      product = create(:simple_product, variant_unit: "weight", variant_unit_scale: "1")
+      filter = { producerFilter: 2 }
+
+      # When I create a variant on the product
+      login_as_admin_and_visit spree.admin_product_variants_path(product, filter)
+      page.find('table.index .icon-edit').click
+
+      # Cancel link should include product filter
+      expected_cancel_url = Regexp.new(
+        Regexp.escape(spree.admin_product_variants_path(product, filter))
+      )
+      expect(page).to have_link(I18n.t('actions.cancel'), href: expected_cancel_url)
+    end
+
     scenario "when variant_unit is weight" do
       # Given a product with unit-related option types, with a variant
       product = create(:simple_product, variant_unit: "weight", variant_unit_scale: "1")
       variant = product.variants.first
-      variant.update_attributes( unit_value: 1, unit_description: 'foo' )
+      variant.update( unit_value: 1, unit_description: 'foo' )
 
       # And the product has option types for the unit-related and non-unit-related option values
       product.option_types << variant.option_values.first.option_type
 
       # When I view the variant
-      login_to_admin_section
-      visit spree.admin_product_variants_path product
+      login_as_admin_and_visit spree.admin_product_variants_path product
       page.find('table.index .icon-edit').click
 
       # Then I should not see a traditional option value field for the unit-related option value
@@ -60,10 +133,9 @@ feature '
     scenario "can update unit_description when variant_unit is items" do
       product = create(:simple_product, variant_unit: "items", variant_unit_name: "bunches")
       variant = product.variants.first
-      variant.update_attributes(unit_description: 'foo')
+      variant.update(unit_description: 'foo')
 
-      login_to_admin_section
-      visit spree.edit_admin_product_variant_path(product, variant)
+      login_as_admin_and_visit spree.edit_admin_product_variant_path(product, variant)
 
       expect(page).to_not have_field "unit_value_human"
       expect(page).to have_field "variant_unit_description", with: "foo"
@@ -120,8 +192,7 @@ feature '
     product = create(:simple_product)
     variant = create(:variant, product: product)
 
-    login_to_admin_section
-    visit spree.admin_product_variants_path product
+    login_as_admin_and_visit spree.admin_product_variants_path product
 
     within "tr#spree_variant_#{variant.id}" do
       accept_alert do
@@ -138,8 +209,7 @@ feature '
     variant = product.variants.first
 
     # When I view the variant
-    login_to_admin_section
-    visit spree.admin_product_variants_path product
+    login_as_admin_and_visit spree.admin_product_variants_path product
     page.find('table.index .icon-edit').click
 
     # It should allow the display name to be changed

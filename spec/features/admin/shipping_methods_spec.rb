@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature 'shipping methods' do
-  include AuthenticationWorkflow
   include WebHelper
+  include AuthenticationHelper
 
   before :each do
     @shipping_method = create(:shipping_method)
@@ -10,7 +12,7 @@ feature 'shipping methods' do
 
   context "as a site admin" do
     before(:each) do
-      quick_login_as_admin
+      login_as_admin
     end
 
     scenario "creating a shipping method owned by some distributors" do
@@ -36,8 +38,7 @@ feature 'shipping methods' do
       expect(page).to have_no_button I18n.t("actions.create")
 
       # Then the shipping method should have its distributor set
-      message = "Shipping method \"Carrier Pidgeon\" has been successfully created!"
-      expect(page).to have_flash_message message
+      expect(flash_message).to include "Carrier Pidgeon", "successfully created!"
 
       sm = Spree::ShippingMethod.last
       expect(sm.name).to eq('Carrier Pidgeon')
@@ -49,7 +50,7 @@ feature 'shipping methods' do
     scenario "deleting a shipping method" do
       visit_delete spree.admin_shipping_method_path(@shipping_method)
 
-      expect(page).to have_content "Shipping method \"#{@shipping_method.name}\" has been successfully removed!"
+      expect(flash_message).to eq "Successfully Removed"
       expect(Spree::ShippingMethod.where(id: @shipping_method.id)).to be_empty
     end
 
@@ -82,7 +83,7 @@ feature 'shipping methods' do
   end
 
   context "as an enterprise user", js: true do
-    let(:enterprise_user) { create_enterprise_user }
+    let(:enterprise_user) { create(:user) }
     let(:distributor1) { create(:distributor_enterprise, name: 'First Distributor') }
     let(:distributor2) { create(:distributor_enterprise, name: 'Second Distributor') }
     let(:distributor3) { create(:distributor_enterprise, name: 'Third Distributor') }
@@ -94,7 +95,7 @@ feature 'shipping methods' do
     before(:each) do
       enterprise_user.enterprise_roles.build(enterprise: distributor1).save
       enterprise_user.enterprise_roles.build(enterprise: distributor2).save
-      quick_login_as enterprise_user
+      login_as enterprise_user
     end
 
     it "creating a shipping method" do
@@ -108,7 +109,7 @@ feature 'shipping methods' do
       # Show the correct fields
       expect(page).to have_field 'shipping_method_name'
       expect(page).to have_field 'shipping_method_description'
-      expect(page).not_to have_select 'shipping_method_display_on'
+      expect(page).to have_select 'shipping_method_display_on'
       expect(page).to have_css 'div#shipping_method_zones_field'
       expect(page).to have_field 'shipping_method_require_ship_address_true', checked: true
 
@@ -126,11 +127,11 @@ feature 'shipping methods' do
       click_button I18n.t("actions.create")
 
       expect(page).to have_content I18n.t('spree.admin.shipping_methods.edit.editing_shipping_method')
-      expect(flash_message).to eq I18n.t('successfully_created', resource: 'Shipping method "Teleport"')
+      expect(flash_message).to include "Teleport", "successfully created!"
 
       expect(first('tags-input .tag-list ti-tag-item')).to have_content "local"
 
-      shipping_method = Spree::ShippingMethod.find_by_name('Teleport')
+      shipping_method = Spree::ShippingMethod.find_by(name: 'Teleport')
       expect(shipping_method.distributors).to eq([distributor1])
       expect(shipping_method.tag_list).to eq(["local"])
     end
@@ -156,26 +157,35 @@ feature 'shipping methods' do
       expect(page).to have_selector 'td', text: 'Two', count: 1
     end
 
-    pending "shows me only shipping methods for the enterprise I select" do
+    it "shows me only shipping methods for the enterprise I select" do
       shipping_method1
       shipping_method2
 
       visit admin_enterprises_path
       within("#e_#{distributor1.id}") { click_link 'Settings' }
+
       within(".side_menu") do
         click_link "Shipping Methods"
       end
-      expect(page).to     have_content shipping_method1.name
-      expect(page).to     have_content shipping_method2.name
+
+      expect(page).to have_content shipping_method1.name
+      expect(page).to have_content shipping_method2.name
+
+      expect(page).to have_checked_field "enterprise_shipping_method_ids_#{shipping_method2.id}"
+      expect(page).to have_checked_field "enterprise_shipping_method_ids_#{shipping_method1.id}"
 
       click_link 'Enterprises'
       within("#e_#{distributor2.id}") { click_link 'Settings' }
+
       within(".side_menu") do
         click_link "Shipping Methods"
       end
 
-      expect(page).not_to have_content shipping_method1.name
+      expect(page).to     have_content shipping_method1.name
       expect(page).to     have_content shipping_method2.name
+
+      expect(page).to have_checked_field "enterprise_shipping_method_ids_#{shipping_method2.id}"
+      expect(page).to have_unchecked_field "enterprise_shipping_method_ids_#{shipping_method1.id}"
     end
   end
 end

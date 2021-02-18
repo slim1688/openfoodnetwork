@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature "Order Management", js: true do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include OpenFoodNetwork::EmailHelper
 
   describe "viewing a completed order" do
@@ -24,31 +26,34 @@ feature "Order Management", js: true do
     before do
       # For some reason, both bill_address and ship_address are not set
       # automatically.
-      #
-      # Also, assigning the shipping_method to a ShippingMethod instance results
-      # in a SystemStackError.
       order.update_attributes!(
         bill_address: bill_address,
-        ship_address: ship_address,
-        shipping_method_id: shipping_method.id
+        ship_address: ship_address
       )
     end
 
     context "when checking out as an anonymous guest" do
-      let(:user) { Spree::User.anonymous! }
+      let!(:customer) { nil }
+      let!(:order) do
+        create(:order_with_credit_payment,
+               user: nil,
+               email: "guest@user.com",
+               distributor: distributor,
+               order_cycle: order_cycle)
+      end
 
       it "allows the user to see the details" do
         # Cannot load the page without token
-        visit spree.order_path(order)
+        visit order_path(order)
         expect(page).to_not be_confirmed_order_page
 
         # Can load the page with token
-        visit spree.order_path(order, token: order.token)
+        visit order_path(order, token: order.token)
         expect(page).to be_confirmed_order_page
 
         # Can load the page even without the token, after loading the page with
         # token.
-        visit spree.order_path(order)
+        visit order_path(order)
         expect(page).to be_confirmed_order_page
       end
     end
@@ -61,7 +66,7 @@ feature "Order Management", js: true do
       end
 
       it "allows the user to see order details" do
-        visit spree.order_path(order)
+        visit order_path(order)
         expect(page).to be_confirmed_order_page
       end
     end
@@ -71,7 +76,7 @@ feature "Order Management", js: true do
 
       it "allows the user to see order details after login" do
         # Cannot load the page without signing in
-        visit spree.order_path(order)
+        visit order_path(order)
         expect(page).to_not be_confirmed_order_page
 
         # Can load the page after signing in
@@ -102,25 +107,25 @@ feature "Order Management", js: true do
     let!(:item3) { create(:line_item, order: order) }
 
     before do
-      order.shipment.shipping_method.calculator.update_attributes(preferred_amount: 5.0)
+      order.shipment.shipping_method.calculator.update(preferred_amount: 5.0)
       order.save
       order.reload
 
-      quick_login_as user
+      login_as user
     end
 
     it 'shows the name of the shipping method' do
-      visit spree.order_path(order)
+      visit order_path(order)
       expect(find('#order')).to have_content(shipping_method.name)
     end
 
     context "when the distributor doesn't allow changes to be made to orders" do
       before do
-        order.distributor.update_attributes(allow_order_changes: false)
+        order.distributor.update(allow_order_changes: false)
       end
 
       it "doesn't show form elements for editing the order" do
-        visit spree.order_path(order)
+        visit order_path(order)
         expect(find("tr.variant-#{item1.variant.id}")).to have_content item1.product.name
         expect(find("tr.variant-#{item2.variant.id}")).to have_content item2.product.name
         expect(find("tr.variant-#{item3.variant.id}")).to have_content item3.product.name
@@ -133,11 +138,11 @@ feature "Order Management", js: true do
         setup_email
       end
       before do
-        order.distributor.update_attributes(allow_order_changes: true)
+        order.distributor.update(allow_order_changes: true)
       end
 
       it "allows quantity to be changed, items to be removed and the order to be cancelled" do
-        visit spree.order_path(order)
+        visit order_path(order)
 
         expect(page).to have_button I18n.t(:order_saved), disabled: true
         expect(page).to have_no_button I18n.t(:save_changes)
@@ -170,7 +175,7 @@ feature "Order Management", js: true do
         end
 
         expect(find(".order-total.grand-total")).to have_content "105.00"
-        expect(Spree::LineItem.find_by_id(item2.id)).to be nil
+        expect(Spree::LineItem.find_by(id: item2.id)).to be nil
 
         # Cancelling the order
         accept_alert do
@@ -183,6 +188,6 @@ feature "Order Management", js: true do
   end
 
   def be_confirmed_order_page
-    have_content /Order #\w+ Confirmed PAID/
+    have_content "Order ##{order.number} Confirmed"
   end
 end

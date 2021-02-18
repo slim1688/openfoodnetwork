@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Admin
@@ -26,18 +28,17 @@ module Admin
       end
 
       context "signing up a new user" do
-        let(:manager_invitation) { instance_double(ManagerInvitationJob) }
+        let(:mail_mock) { double(:mailer, deliver_later: true) }
 
         before do
-          setup_email
+          allow(EnterpriseMailer).to receive(:manager_invitation).
+            with(enterprise, kind_of(Spree::User)) { mail_mock }
+
           allow(controller).to receive_messages spree_current_user: admin
         end
 
         it 'enqueues an invitation email' do
-          allow(ManagerInvitationJob)
-            .to receive(:new).with(enterprise.id, kind_of(Integer)) { manager_invitation }
-
-          expect(Delayed::Job).to receive(:enqueue).with(manager_invitation)
+          expect(mail_mock).to receive(:deliver_later)
 
           spree_post :create, email: 'un.registered@email.com', enterprise_id: enterprise.id
         end
@@ -45,7 +46,7 @@ module Admin
         it "returns the user id" do
           spree_post :create, email: 'un.registered@email.com', enterprise_id: enterprise.id
 
-          new_user = Spree::User.find_by_email('un.registered@email.com')
+          new_user = Spree::User.find_by(email: 'un.registered@email.com')
           expect(json_response['user']).to eq new_user.id
         end
       end
@@ -61,7 +62,7 @@ module Admin
         it "returns success code" do
           spree_post :create, email: 'an@email.com', enterprise_id: enterprise.id
 
-          new_user = Spree::User.find_by_email('an@email.com')
+          new_user = Spree::User.find_by(email: 'an@email.com')
 
           expect(new_user.reset_password_token).to_not be_nil
           expect(json_response['user']).to eq new_user.id
@@ -77,7 +78,7 @@ module Admin
         it "returns unauthorized response" do
           spree_post :create, email: 'another@email.com', enterprise_id: enterprise.id
 
-          new_user = Spree::User.find_by_email('another@email.com')
+          new_user = Spree::User.find_by(email: 'another@email.com')
 
           expect(new_user).to be_nil
           expect(response.status).to eq 302

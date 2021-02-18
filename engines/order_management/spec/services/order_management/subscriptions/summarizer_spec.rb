@@ -8,7 +8,7 @@ module OrderManagement
       let(:order) { create(:order) }
       let(:summarizer) { OrderManagement::Subscriptions::Summarizer.new }
 
-      before { allow(Rails.logger).to receive(:info) }
+      before { allow(JobLogger.logger).to receive(:info) }
 
       describe "#summary_for" do
         let(:order) { double(:order, distributor_id: 123) }
@@ -100,7 +100,7 @@ module OrderManagement
         let(:summary1) { double(:summary) }
         let(:summary2) { double(:summary) }
         let(:summaries) { { 1 => summary1, 2 => summary2 } }
-        let(:mail_mock) { double(:mail, deliver: true) }
+        let(:mail_mock) { double(:mail, deliver_now: true) }
 
         before do
           summarizer.instance_variable_set(:@summaries, summaries)
@@ -116,7 +116,7 @@ module OrderManagement
         let(:summary1) { double(:summary) }
         let(:summary2) { double(:summary) }
         let(:summaries) { { 1 => summary1, 2 => summary2 } }
-        let(:mail_mock) { double(:mail, deliver: true) }
+        let(:mail_mock) { double(:mail, deliver_now: true) }
 
         before do
           summarizer.instance_variable_set(:@summaries, summaries)

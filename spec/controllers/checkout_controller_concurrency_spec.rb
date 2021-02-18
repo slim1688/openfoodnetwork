@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 # This is the first example of testing concurrency in the Open Food Network.
@@ -15,6 +17,20 @@ describe CheckoutController, concurrency: true, type: :controller do
   let(:payment_method) { create(:payment_method, distributors: [distributor]) }
   let(:breakpoint) { Mutex.new }
 
+  let(:address_params) { address.attributes.except("id") }
+  let(:order_params) {
+    {
+      "payments_attributes" => [
+        {
+          "payment_method_id" => payment_method.id,
+          "amount" => order.total
+        }
+      ],
+      "bill_address_attributes" => address_params,
+      "ship_address_attributes" => address_params,
+    }
+  }
+
   before do
     # Create a valid order ready for checkout:
     create(:shipping_method, distributors: [distributor])
@@ -26,31 +42,12 @@ describe CheckoutController, concurrency: true, type: :controller do
     allow(controller).to receive(:spree_current_user).and_return(order.user)
     allow(controller).to receive(:current_distributor).and_return(order.distributor)
     allow(controller).to receive(:current_order_cycle).and_return(order.order_cycle)
+  end
 
+  it "handles two concurrent orders successfully" do
     # New threads start running straight away. The breakpoint is after loading
     # the order and before advancing the order's state and making payments.
     breakpoint.lock
-    expect(controller).to receive(:fire_event).with("spree.checkout.update") do
-      breakpoint.synchronize {}
-      # This is what fire_event does.
-      # I did not find out how to call the original code otherwise.
-      ActiveSupport::Notifications.instrument("spree.checkout.update")
-    end
-  end
-
-  it "waits for concurrent checkouts" do
-    # Basic data the user submits during checkout:
-    address_params = address.attributes.except("id")
-    order_params = {
-      "payments_attributes" => [
-        {
-          "payment_method_id" => payment_method.id,
-          "amount" => order.total
-        }
-      ],
-      "bill_address_attributes" => address_params,
-      "ship_address_attributes" => address_params,
-    }
 
     # Starting two checkout threads. The controller code will determine if
     # these two threads are synchronised correctly or run into a race condition.
@@ -85,7 +82,7 @@ describe CheckoutController, concurrency: true, type: :controller do
     # see the order page. This is basically verifying a "double click"
     # scenario.
     expect(response.status).to eq(200)
-    expect(response.body).to eq({ path: spree.order_path(order) }.to_json)
+    expect(response.body).to eq({ path: order_path(order) }.to_json)
     expect(order.payments.count).to eq 1
     expect(order.completed?).to be true
   end

@@ -63,28 +63,36 @@ module Permissions
 
     # Any orders placed through any hub that I manage
     def managed_orders_where_values
-      Spree::Order.
-        where(distributor_id: @permissions.managed_enterprises.select("enterprises.id")).
-        where_values.
-        reduce(:and)
+      query = Spree::Order.
+        where(distributor_id: @permissions.managed_enterprises.select("enterprises.id"))
+
+      apply_where_clause(query).reduce(:and)
     end
 
     # Any order that is placed through an order cycle one of my managed enterprises coordinates
     def coordinated_orders_where_values
-      Spree::Order.
-        where(order_cycle_id: @permissions.coordinated_order_cycles.select(:id)).
-        where_values.
-        reduce(:and)
+      query = Spree::Order.
+        where(order_cycle_id: @permissions.coordinated_order_cycles.select(:id))
+
+      apply_where_clause(query).reduce(:and)
     end
 
     def produced_orders_where_values
-      Spree::Order.with_line_items_variants_and_products_outer.
+      query = Spree::Order.with_line_items_variants_and_products_outer.
         where(
           distributor_id: granted_distributor_ids,
           spree_products: { supplier_id: enterprises_with_associated_orders }
-        ).
-        where_values.
-        reduce(:and)
+        )
+
+      apply_where_clause(query).reduce(:and)
+    end
+
+    def apply_where_clause(query)
+      if ENV['DEPENDENCIES_NEXT']
+        query.where_clause.__send__(:predicates)
+      else
+        query.where_values
+      end
     end
 
     def enterprises_with_associated_orders
@@ -106,11 +114,9 @@ module Permissions
     # Any from visible orders, where the product is produced by one of my managed producers
     def produced_line_items
       Spree::LineItem.where(order_id: visible_orders.select("DISTINCT spree_orders.id")).
-        joins(:product).
-        where(spree_products:
-        {
-          supplier_id: @permissions.managed_enterprises.is_primary_producer.select("enterprises.id")
-        })
+        supplied_by_any(
+          @permissions.managed_enterprises.is_primary_producer.select("enterprises.id")
+        )
     end
   end
 end

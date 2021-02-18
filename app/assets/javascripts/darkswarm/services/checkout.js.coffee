@@ -1,4 +1,4 @@
-Darkswarm.factory 'Checkout', ($injector, CurrentOrder, ShippingMethods, StripeElements, PaymentMethods, $http, Navigation, CurrentHub, RailsFlashLoader, Loading)->
+Darkswarm.factory 'Checkout', ($injector, CurrentOrder, ShippingMethods, StripeElements, PaymentMethods, $http, Navigation, CurrentHub, Messages)->
   new class Checkout
     errors: {}
     secrets: {}
@@ -13,7 +13,7 @@ Darkswarm.factory 'Checkout', ($injector, CurrentOrder, ShippingMethods, StripeE
         @submit()
 
     submit: =>
-      Loading.message = t 'submitting_order'
+      Messages.loading(t 'submitting_order')
       $http.put('/checkout.json', {order: @preprocess()})
       .then (response) =>
         Navigation.go response.data.path
@@ -21,21 +21,25 @@ Darkswarm.factory 'Checkout', ($injector, CurrentOrder, ShippingMethods, StripeE
         try
           @handle_checkout_error_response(response)
         catch error
-          @loadFlash(error: t("checkout.failed")) # inform the user about the unexpected error
-          throw error # generate a BugsnagJS alert
+          try
+            @loadFlash(error: t("checkout.failed")) # inform the user about the unexpected error
+          finally
+            Bugsnag.notify(error)
+            throw error
 
     handle_checkout_error_response: (response) =>
-      if response.data.path
+      throw response unless response.data?
+
+      if response.data.path?
         Navigation.go response.data.path
       else
-        throw response unless response.data.flash
+        throw response unless response.data.flash?
 
         @errors = response.data.errors
         @loadFlash(response.data.flash)
 
     loadFlash: (flash) =>
-      Loading.clear()
-      RailsFlashLoader.loadFlash(flash)
+      Messages.flash(flash)
 
     # Rails wants our Spree::Address data to be provided with _attributes
     preprocess: ->
@@ -91,6 +95,10 @@ Darkswarm.factory 'Checkout', ($injector, CurrentOrder, ShippingMethods, StripeE
               last_name: @order.bill_address.lastname
               save_requested_by_customer: @secrets.save_requested_by_customer
           }
+
+      if @terms_and_conditions_accepted()
+        munged_order["terms_and_conditions_accepted"] = true
+
       munged_order
 
     shippingMethod: ->
@@ -110,3 +118,7 @@ Darkswarm.factory 'Checkout', ($injector, CurrentOrder, ShippingMethods, StripeE
 
     cartTotal: ->
       @order.display_total + @shippingPrice() + @paymentPrice()
+
+    terms_and_conditions_accepted: ->
+      terms_and_conditions_checkbox = angular.element("#accept_terms")[0]
+      terms_and_conditions_checkbox? && terms_and_conditions_checkbox.checked

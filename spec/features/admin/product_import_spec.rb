@@ -1,14 +1,16 @@
+# frozen_string_literal: false
+
 require 'spec_helper'
 require 'open_food_network/permissions'
 
 feature "Product Import", js: true do
   include AdminHelper
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include WebHelper
 
   let!(:admin) { create(:admin_user) }
-  let!(:user) { create_enterprise_user }
-  let!(:user2) { create_enterprise_user }
+  let!(:user) { create(:user) }
+  let!(:user2) { create(:user) }
   let!(:enterprise) { create(:supplier_enterprise, owner: user, name: "User Enterprise") }
   let!(:enterprise2) { create(:distributor_enterprise, owner: user2, name: "Another Enterprise") }
   let!(:relationship) { create(:enterprise_relationship, parent: enterprise, child: enterprise2, permissions_list: [:create_variant_overrides]) }
@@ -31,7 +33,7 @@ feature "Product Import", js: true do
   let(:shipping_category_id_str) { Spree::ShippingCategory.all.first.id.to_s }
 
   describe "when importing products from uploaded file" do
-    before { quick_login_as_admin }
+    before { login_as_admin }
     after { File.delete('/tmp/test.csv') }
 
     it "validates entries and saves them if they are all valid and allows viewing new items in Bulk Products" do
@@ -60,8 +62,8 @@ feature "Product Import", js: true do
       expect(page).to have_selector '.created-count', text: '2'
       expect(page).to have_no_selector '.updated-count'
 
-      carrots = Spree::Product.find_by_name('Carrots')
-      potatoes = Spree::Product.find_by_name('Potatoes')
+      carrots = Spree::Product.find_by(name: 'Carrots')
+      potatoes = Spree::Product.find_by(name: 'Potatoes')
       expect(potatoes.supplier).to eq enterprise
       expect(potatoes.on_hand).to eq 6
       expect(potatoes.price).to eq 6.50
@@ -127,7 +129,7 @@ feature "Product Import", js: true do
       expect(page).to have_selector '.created-count', text: '1'
       expect(page).to have_no_selector '.updated-count'
 
-      carrots = Spree::Product.find_by_name('Carrots')
+      carrots = Spree::Product.find_by(name: 'Carrots')
       expect(carrots.tax_category).to eq tax_category
       expect(carrots.shipping_category).to eq shipping_category
     end
@@ -150,9 +152,9 @@ feature "Product Import", js: true do
 
       save_data
 
-      carrots = Spree::Product.find_by_name('Carrots')
+      carrots = Spree::Product.find_by(name: 'Carrots')
       expect(carrots.variants.first.import_date).to be_within(1.minute).of Time.zone.now
-      potatoes = Spree::Product.find_by_name('Potatoes')
+      potatoes = Spree::Product.find_by(name: 'Potatoes')
       expect(potatoes.variants.first.import_date).to be_within(1.minute).of Time.zone.now
 
       click_link I18n.t('admin.product_import.save_results.view_products')
@@ -168,7 +170,7 @@ feature "Product Import", js: true do
       end
 
       expect(page).to have_selector 'div#s2id_import_date_filter'
-      import_time = carrots.import_date.to_date.to_formatted_s(:long)
+      import_time = carrots.import_date.to_date.to_formatted_s(:long).gsub('  ', ' ')
       select2_select import_time, from: "import_date_filter"
       page.find('.button.icon-search').click
 
@@ -200,9 +202,9 @@ feature "Product Import", js: true do
       expect(page).to have_selector '.created-count', text: '1'
       expect(page).to have_selector '.reset-count', text: '3'
 
-      expect(Spree::Product.find_by_name('Carrots').on_hand).to eq 500
-      expect(Spree::Product.find_by_name('Cabbage').on_hand).to eq 0
-      expect(Spree::Product.find_by_name('Beans').on_hand).to eq 0
+      expect(Spree::Product.find_by(name: 'Carrots').on_hand).to eq 500
+      expect(Spree::Product.find_by(name: 'Cabbage').on_hand).to eq 0
+      expect(Spree::Product.find_by(name: 'Beans').on_hand).to eq 0
     end
 
     it "can save a new product and variant of that product at the same time, add variant to existing product" do
@@ -229,12 +231,12 @@ feature "Product Import", js: true do
 
       save_data
 
-      small_bag = Spree::Variant.find_by_display_name('Small Bag')
+      small_bag = Spree::Variant.find_by(display_name: 'Small Bag')
       expect(small_bag.product.name).to eq 'Potatoes'
       expect(small_bag.price).to eq 3.50
       expect(small_bag.on_hand).to eq 5
 
-      big_bag = Spree::Variant.find_by_display_name('Big Bag')
+      big_bag = Spree::Variant.find_by(display_name: 'Big Bag')
       expect(big_bag.product.name).to eq 'Potatoes'
       expect(big_bag.price).to eq 5.50
       expect(big_bag.on_hand).to eq 6
@@ -297,6 +299,31 @@ feature "Product Import", js: true do
       end
     end
 
+    it "handles a unit of kg for inventory import" do
+      product = create(:simple_product, supplier: enterprise, on_hand: 100, name: 'Beets', unit_value: '1000', variant_unit_scale: 1000)
+      csv_data = CSV.generate do |csv|
+        csv << ["name", "distributor", "producer", "category", "on_hand", "price", "unit_type", "units", "on_demand"]
+        csv << ["Beets", "Another Enterprise", "User Enterprise", "Vegetables", nil, "3.20", "kg", "1", "true"]
+      end
+
+      File.write('/tmp/test.csv', csv_data)
+
+      visit main_app.admin_product_import_path
+      select2_select I18n.t('admin.product_import.index.inventories'), from: "settings_import_into"
+      attach_file 'file', '/tmp/test.csv'
+      click_button 'Upload'
+
+      proceed_to_validation
+
+      expect(page).to have_selector '.item-count', text: "1"
+      expect(page).to have_no_selector '.invalid-count'
+      expect(page).to have_selector '.inv-create-count', text: '1'
+
+      save_data
+
+      expect(page).to have_selector '.inv-created-count', text: '1'
+    end
+
     it "handles on_demand and on_hand validations with inventory" do
       csv_data = CSV.generate do |csv|
         csv << ["name", "distributor", "producer", "category", "on_hand", "price", "units", "on_demand"]
@@ -339,10 +366,60 @@ feature "Product Import", js: true do
       expect(cabbage_override.count_on_hand).to be_nil
       expect(cabbage_override.on_demand).to be_nil
     end
+
+    it "imports lines with all allowed units" do
+      csv_data = CSV.generate do |csv|
+        csv << ["name", "producer", "category", "on_hand", "price", "units", "unit_type", "shipping_category_id"]
+        csv << ["Carrots", "User Enterprise", "Vegetables", "5", "3.20", "1", "lb", shipping_category_id_str]
+        csv << ["Potatoes", "User Enterprise", "Vegetables", "6", "6.50", "8", "oz", shipping_category_id_str]
+      end
+      File.write('/tmp/test.csv', csv_data)
+
+      visit main_app.admin_product_import_path
+
+      expect(page).to have_content "Select a spreadsheet to upload"
+      attach_file 'file', '/tmp/test.csv'
+      click_button 'Upload'
+
+      proceed_to_validation
+
+      expect(page).to have_selector '.item-count', text: "2"
+      expect(page).to have_no_selector '.invalid-count'
+      expect(page).to have_selector '.create-count', text: "2"
+      expect(page).to have_no_selector '.update-count'
+
+      save_data
+
+      expect(page).to have_selector '.created-count', text: '2'
+      expect(page).to have_no_selector '.updated-count'
+    end
+
+    it "does not allow import for lines with unknown units" do
+      csv_data = CSV.generate do |csv|
+        csv << ["name", "producer", "category", "on_hand", "price", "units", "unit_type", "shipping_category_id"]
+        csv << ["Heavy Carrots", "Unkown Enterprise", "Mouldy vegetables", "666", "3.20", "1", "stones", shipping_category_id_str]
+      end
+      File.write('/tmp/test.csv', csv_data)
+
+      visit main_app.admin_product_import_path
+
+      expect(page).to have_content "Select a spreadsheet to upload"
+      attach_file 'file', '/tmp/test.csv'
+      click_button 'Upload'
+
+      proceed_to_validation
+
+      expect(page).to have_selector '.item-count', text: "1"
+      expect(page).to have_selector '.invalid-count', text: "1"
+      expect(page).to have_no_selector ".create-count"
+      expect(page).to have_no_selector '.update-count'
+
+      expect(page).to have_no_selector 'input[type=submit][value="Save"]'
+    end
   end
 
   describe "when dealing with uploaded files" do
-    before { quick_login_as_admin }
+    before { login_as_admin }
 
     it "checks filetype on upload" do
       File.write('/tmp/test.txt', "Wrong filetype!")
@@ -377,6 +454,24 @@ feature "Product Import", js: true do
       expect(page).to have_no_selector 'input[type=submit][value="Save"]'
       File.delete('/tmp/test.csv')
     end
+
+    it "handles cases where files contain malformed data" do
+      csv_data = "name,producer,category,on_hand,price,units,unit_type,shipping_category\n"
+      csv_data += "Malformed \rBrocolli,#{enterprise.name},Vegetables,8,2.50,200,g,#{shipping_category.name}\n"
+
+      File.write('/tmp/test.csv', csv_data)
+
+      visit main_app.admin_product_import_path
+      attach_file 'file', '/tmp/test.csv'
+      click_button 'Upload'
+
+      expect(page).to have_no_selector '.create-count'
+      expect(page).to have_no_selector '.update-count'
+      expect(page).to have_no_selector 'input[type=submit][value="Save"]'
+      expect(flash_message).to match(I18n.t('admin.product_import.model.malformed_csv', error_message: ""))
+
+      File.delete('/tmp/test.csv')
+    end
   end
 
   describe "handling enterprise permissions" do
@@ -390,7 +485,7 @@ feature "Product Import", js: true do
       end
       File.write('/tmp/test.csv', csv_data)
 
-      quick_login_as user
+      login_as user
       visit main_app.admin_product_import_path
 
       attach_file 'file', '/tmp/test.csv'
@@ -414,7 +509,7 @@ feature "Product Import", js: true do
     let(:tmp_csv_path) { "/tmp/test.csv" }
 
     before do
-      quick_login_as admin
+      login_as admin
       visit main_app.admin_product_import_path
     end
 
@@ -439,8 +534,8 @@ feature "Product Import", js: true do
         proceed_to_validation
 
         # Check that all rows are validated.
-        heading = "120 #{I18n.t('admin.product_import.import.products_to_create')}"
-        find(".panel-header", text: heading).click
+        heading = I18n.t('admin.product_import.import.products_to_create')
+        find(".header-description", text: heading).click
         expect(page).to have_content "Imported Product 10"
         expect(page).to have_content "Imported Product 60"
         expect(page).to have_content "Imported Product 110"
@@ -453,9 +548,9 @@ feature "Product Import", js: true do
         expect_import_completed
 
         # Check that all rows are saved.
-        expect(producer.supplied_products.find_by_name("Imported Product 10")).to be_present
-        expect(producer.supplied_products.find_by_name("Imported Product 60")).to be_present
-        expect(producer.supplied_products.find_by_name("Imported Product 110")).to be_present
+        expect(producer.supplied_products.find_by(name: "Imported Product 10")).to be_present
+        expect(producer.supplied_products.find_by(name: "Imported Product 60")).to be_present
+        expect(producer.supplied_products.find_by(name: "Imported Product 110")).to be_present
       end
     end
   end

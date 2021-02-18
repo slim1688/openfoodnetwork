@@ -1,23 +1,22 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe "Mail Methods" do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
 
-  before(:each) do
-    quick_login_as_admin
-    visit spree.admin_dashboard_path
-    click_link "Configuration"
-  end
+  before { login_as_admin_and_visit spree.edit_admin_general_settings_path }
 
   context "edit" do
-    before(:each) do
-      click_link "Mail Method Settings"
-    end
+    before { click_link "Mail Method Settings" }
 
-    it "should be able to edit mail method settings" do
-      fill_in "mail_bcc", with: "spree@example.com99"
-      click_button "Update"
-      expect(page).to have_content("successfully updated!")
+    it "only allows changing the mails_from setting" do
+      fill_in 'mails_from', with: 'ofn@example.com'
+      fill_in 'mail_bcc', with: 'bcc@example.com'
+      expect(page).to have_field('intercept_email', disabled: true)
+
+      click_button 'Update'
+      expect(page).to have_content('successfully updated!')
     end
   end
 end

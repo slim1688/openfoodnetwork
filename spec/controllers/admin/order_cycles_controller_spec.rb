@@ -1,10 +1,10 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Admin
   describe OrderCyclesController, type: :controller do
-    include AuthenticationWorkflow
-
-    let!(:distributor_owner) { create_enterprise_user enterprise_limit: 2 }
+    let!(:distributor_owner) { create(:user) }
 
     before do
       allow(controller).to receive_messages spree_current_user: distributor_owner
@@ -20,7 +20,7 @@ module Admin
 
         context "html" do
           it "doesn't load any data" do
-            spree_get :index, format: :html
+            get :index, format: :html
             expect(assigns(:collection)).to be_empty
           end
         end
@@ -28,7 +28,7 @@ module Admin
         context "json" do
           context "where ransack conditions are specified" do
             it "loads order cycles that closed within the past month, and orders without a close_at date" do
-              spree_get :index, format: :json
+              get :index, format: :json
               expect(assigns(:collection)).to_not include oc1, oc2
               expect(assigns(:collection)).to include oc3, oc4
             end
@@ -38,7 +38,7 @@ module Admin
             let(:q) { { orders_close_at_gt: 45.days.ago } }
 
             it "loads order cycles that closed after the specified date, and orders without a close_at date" do
-              spree_get :index, format: :json, q: q
+              get :index, format: :json, q: q
               expect(assigns(:collection)).to_not include oc1
               expect(assigns(:collection)).to include oc2, oc3, oc4
             end
@@ -47,7 +47,7 @@ module Admin
               before { q.merge!(id_not_in: [oc2.id, oc4.id]) }
 
               it "loads order cycles that meet all conditions" do
-                spree_get :index, format: :json, q: q
+                get :index, format: :json, q: q
                 expect(assigns(:collection)).to_not include oc1, oc2, oc4
                 expect(assigns(:collection)).to include oc3
               end
@@ -62,7 +62,7 @@ module Admin
         let!(:distributor) { create(:distributor_enterprise, owner: distributor_owner) }
 
         it "renders the new template" do
-          spree_get :new
+          get :new
           expect(response).to render_template :new
         end
       end
@@ -73,21 +73,21 @@ module Admin
         let!(:distributor3) { create(:distributor_enterprise) }
 
         it "renders the set_coordinator template" do
-          spree_get :new
+          get :new
           expect(response).to render_template :set_coordinator
         end
 
         describe "and a coordinator_id is submitted as part of the request" do
           describe "when the user manages the enterprise" do
             it "renders the new template" do
-              spree_get :new, coordinator_id: distributor1.id
+              get :new, coordinator_id: distributor1.id
               expect(response).to render_template :new
             end
           end
 
           describe "when the user does not manage the enterprise" do
             it "renders the set_coordinator template and sets a flash error" do
-              spree_get :new, coordinator_id: distributor3.id
+              get :new, coordinator_id: distributor3.id
               expect(response).to render_template :set_coordinator
               expect(flash[:error]).to eq "You don't have permission to create an order cycle coordinated by that enterprise"
             end
@@ -104,7 +104,7 @@ module Admin
         let(:params) { { format: :json, order_cycle: {} } }
 
         before do
-          login_as_enterprise_user([shop])
+          controller_login_as_enterprise_user([shop])
           allow(OrderCycleForm).to receive(:new) { form_mock }
         end
 
@@ -150,7 +150,7 @@ module Admin
       end
 
       context "as a manager of the coordinator" do
-        before { login_as_enterprise_user([coordinator]) }
+        before { controller_login_as_enterprise_user([coordinator]) }
         let(:params) { { format: :json, id: order_cycle.id, order_cycle: {} } }
 
         context "when updating succeeds" do
@@ -178,9 +178,21 @@ module Admin
 
           it "returns an error message" do
             spree_put :update, params
+
             json_response = JSON.parse(response.body)
             expect(json_response['errors']).to be
           end
+        end
+
+        it "can update preference product_selection_from_coordinator_inventory_only" do
+          expect(OrderCycleForm).to receive(:new).
+            with(order_cycle,
+                 { "preferred_product_selection_from_coordinator_inventory_only" => true },
+                 anything) { form_mock }
+          allow(form_mock).to receive(:save) { true }
+
+          spree_put :update, params.
+            merge(order_cycle: { preferred_product_selection_from_coordinator_inventory_only: true })
         end
       end
     end
@@ -203,7 +215,7 @@ module Admin
 
       context "as a manager of the coordinator" do
         let(:user) { coordinator.owner }
-        let(:expected) { [order_cycle, hash_including(order_cycle: allowed.merge(restricted)), user] }
+        let(:expected) { [order_cycle, allowed.merge(restricted), user] }
 
         it "allows me to update exchange information for exchanges, name and dates" do
           expect(OrderCycleForm).to receive(:new).with(*expected) { form_mock }
@@ -213,7 +225,7 @@ module Admin
 
       context "as a producer supplying to an order cycle" do
         let(:user) { producer.owner }
-        let(:expected) { [order_cycle, hash_including(order_cycle: allowed), user] }
+        let(:expected) { [order_cycle, allowed, user] }
 
         it "allows me to update exchange information for exchanges, but not name or dates" do
           expect(OrderCycleForm).to receive(:new).with(*expected) { form_mock }
@@ -288,10 +300,10 @@ module Admin
     end
 
     describe "notifying producers" do
-      let(:user) { create_enterprise_user }
+      let(:user) { create(:user) }
       let(:admin_user) do
         user = create(:user)
-        user.spree_roles << Spree::Role.find_or_create_by_name!('admin')
+        user.spree_roles << Spree::Role.find_or_create_by!(name: 'admin')
         user
       end
       let(:order_cycle) { create(:simple_order_cycle) }
@@ -319,8 +331,8 @@ module Admin
 
       describe "when an order cycle is deleteable" do
         it "allows the order_cycle to be destroyed" do
-          spree_get :destroy, id: oc.id
-          expect(OrderCycle.find_by_id(oc.id)).to be nil
+          get :destroy, id: oc.id
+          expect(OrderCycle.find_by(id: oc.id)).to be nil
         end
       end
 
@@ -328,7 +340,7 @@ module Admin
         let!(:order) { create(:order, order_cycle: oc) }
 
         it "displays an error message when we attempt to delete it" do
-          spree_get :destroy, id: oc.id
+          get :destroy, id: oc.id
           expect(response).to redirect_to admin_order_cycles_path
           expect(flash[:error]).to eq I18n.t('admin.order_cycles.destroy_errors.orders_present')
         end
@@ -338,7 +350,7 @@ module Admin
         let!(:schedule) { create(:schedule, order_cycles: [oc]) }
 
         it "displays an error message when we attempt to delete it" do
-          spree_get :destroy, id: oc.id
+          get :destroy, id: oc.id
           expect(response).to redirect_to admin_order_cycles_path
           expect(flash[:error]).to eq I18n.t('admin.order_cycles.destroy_errors.schedule_present')
         end

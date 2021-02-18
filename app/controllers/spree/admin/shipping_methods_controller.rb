@@ -1,10 +1,10 @@
 module Spree
   module Admin
-    class ShippingMethodsController < ResourceController
-      before_filter :load_data, except: [:index]
-      before_filter :set_shipping_category, only: [:create, :update]
-      before_filter :set_zones, only: [:create, :update]
-      before_filter :load_hubs, only: [:new, :edit, :create, :update]
+    class ShippingMethodsController < ::Admin::ResourceController
+      before_action :load_data, except: [:index]
+      before_action :set_shipping_category, only: [:create, :update]
+      before_action :set_zones, only: [:create, :update]
+      before_action :load_hubs, only: [:new, :edit, :create, :update]
 
       # Sort shipping methods by distributor name
       def collection
@@ -50,7 +50,7 @@ module Spree
 
       def load_hubs
         # rubocop:disable Style/TernaryParentheses
-        @hubs = Enterprise.managed_by(spree_current_user).is_distributor.sort_by! do |d|
+        @hubs = Enterprise.managed_by(spree_current_user).is_distributor.to_a.sort_by! do |d|
           [(@shipping_method.has_distributor? d) ? 0 : 1, d.name]
         end
         # rubocop:enable Style/TernaryParentheses
@@ -74,12 +74,20 @@ module Spree
       end
 
       def location_after_save
-        edit_admin_shipping_method_path(@shipping_method)
+        spree.edit_admin_shipping_method_path(@shipping_method)
       end
 
       def load_data
         @available_zones = Zone.order(:name)
         @calculators = ShippingMethod.calculators.sort_by(&:name)
+      end
+
+      def permitted_resource_params
+        params.require(:shipping_method).permit(
+          :name, :description, :display_on, :require_ship_address, :tag_list, :calculator_type,
+          distributor_ids: [],
+          calculator_attributes: PermittedAttributes::Calculator.attributes
+        )
       end
     end
   end

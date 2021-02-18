@@ -1,16 +1,20 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe "checking out an order with a Stripe SCA payment method", type: :request do
   include ShopWorkflow
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include OpenFoodNetwork::ApiHelper
+  include StripeHelper
+  include StripeStubs
 
   let!(:order_cycle) { create(:simple_order_cycle) }
   let!(:enterprise) { create(:distributor_enterprise) }
   let!(:shipping_method) do
     create(
       :shipping_method,
-      calculator: Spree::Calculator::FlatRate.new(preferred_amount: 0),
+      calculator: Calculator::FlatRate.new(preferred_amount: 0),
       distributors: [enterprise]
     )
   end
@@ -62,12 +66,20 @@ describe "checking out an order with a Stripe SCA payment method", type: :reques
     }
   end
   let(:payment_intent_response_mock) do
-    { status: 200, body: JSON.generate(object: "payment_intent", amount: 2000, charges: { data: [{ id: "ch_1234", amount: 2000 }]}) }
+    {
+      status: 200, body: JSON.generate(object: "payment_intent",
+                                       amount: 2000,
+                                       charges: { data: [{ id: "ch_1234", amount: 2000 }] })
+    }
   end
   let(:payment_intent_authorize_response_mock) do
-    { status: 200, body: JSON.generate(id: payment_intent_id, object: "payment_intent", amount: 2000,
+    {
+      status: 200, body: JSON.generate(id: payment_intent_id,
+                                       object: "payment_intent",
+                                       amount: 2000,
                                        status: "requires_capture", last_payment_error: nil,
-                                       charges: { data: [{ id: "ch_1234", amount: 2000 }]}) }
+                                       charges: { data: [{ id: "ch_1234", amount: 2000 }] })
+    }
   end
 
   before do
@@ -76,7 +88,7 @@ describe "checking out an order with a Stripe SCA payment method", type: :reques
     allow(order_cycle_distributed_variants).to receive(:distributes_order_variants?) { true }
 
     allow(Stripe).to receive(:api_key) { "sk_test_12345" }
-    order.update_attributes(distributor_id: enterprise.id, order_cycle_id: order_cycle.id)
+    order.update(distributor_id: enterprise.id, order_cycle_id: order_cycle.id)
     order.reload.update_totals
     set_order order
 
@@ -94,6 +106,11 @@ describe "checking out an order with a Stripe SCA payment method", type: :reques
     stub_request(:post, "https://api.stripe.com/v1/payment_intents/#{payment_intent_id}/capture")
       .with(basic_auth: ["sk_test_12345", ""], body: { amount_to_capture: "1234" })
       .to_return(payment_intent_response_mock)
+
+    stub_retrieve_payment_method_request("pm_123")
+    stub_list_customers_request(email: order.user.email, response: {})
+    stub_get_customer_payment_methods_request(customer: "cus_A456", response: {})
+    stub_add_metadata_request(payment_method: "pm_456", response: {})
   end
 
   context "when the user submits a new card and doesn't request that the card is saved for later" do
@@ -113,7 +130,7 @@ describe "checking out an order with a Stripe SCA payment method", type: :reques
       it "should process the payment without storing card details" do
         put update_checkout_path, params
 
-        expect(json_response["path"]).to eq spree.order_path(order)
+        expect(json_response["path"]).to eq order_path(order)
         expect(order.payments.completed.count).to be 1
 
         card = order.payments.completed.first.source
@@ -145,10 +162,10 @@ describe "checking out an order with a Stripe SCA payment method", type: :reques
 
   context "when saving a card or using a stored card is involved" do
     let(:hubs_payment_method_response_mock) do
-    {
-      status: 200,
-      body: JSON.generate(id: hubs_stripe_payment_method, customer: customer_id)
-    }
+      {
+        status: 200,
+        body: JSON.generate(id: hubs_stripe_payment_method, customer: customer_id)
+      }
     end
     let(:customer_response_mock) do
       {
@@ -164,13 +181,15 @@ describe "checking out an order with a Stripe SCA payment method", type: :reques
               headers: { 'Stripe-Account' => 'abc123' })
         .to_return(hubs_payment_method_response_mock)
 
-      # Creates a customer (this stubs the customers call to the main stripe account and also the call to the connected account)
+      # Creates a customer
+      #   This stubs the customers call to both the main stripe account and the connected account
       stub_request(:post, "https://api.stripe.com/v1/customers")
         .with(body: { email: order.email })
         .to_return(customer_response_mock)
 
       # Attaches the payment method to the customer in the hub's stripe account
-      stub_request(:post, "https://api.stripe.com/v1/payment_methods/#{hubs_stripe_payment_method}/attach")
+      stub_request(:post,
+                   "https://api.stripe.com/v1/payment_methods/#{hubs_stripe_payment_method}/attach")
         .with(body: { customer: customer_id },
               headers: { 'Stripe-Account' => 'abc123' })
         .to_return(hubs_payment_method_response_mock)
@@ -189,7 +208,8 @@ describe "checking out an order with a Stripe SCA payment method", type: :reques
         source_attributes[:save_requested_by_customer] = '1'
 
         # Attaches the payment method to the customer
-        stub_request(:post, "https://api.stripe.com/v1/payment_methods/#{stripe_payment_method}/attach")
+        stub_request(:post,
+                     "https://api.stripe.com/v1/payment_methods/#{stripe_payment_method}/attach")
           .with(body: { customer: customer_id })
           .to_return(payment_method_attach_response_mock)
       end
@@ -198,7 +218,7 @@ describe "checking out an order with a Stripe SCA payment method", type: :reques
         it "should process the payment, and store the card/customer details" do
           put update_checkout_path, params
 
-          expect(json_response["path"]).to eq spree.order_path(order)
+          expect(json_response["path"]).to eq order_path(order)
           expect(order.payments.completed.count).to be 1
 
           card = order.payments.completed.first.source
@@ -276,14 +296,14 @@ describe "checking out an order with a Stripe SCA payment method", type: :reques
 
       before do
         params[:order][:existing_card_id] = credit_card.id
-        quick_login_as(order.user)
+        login_as(order.user)
       end
 
       context "and the payment intent and payment method requests are accepted" do
         it "should process the payment, and keep the profile ids and other card details" do
           put update_checkout_path, params
 
-          expect(json_response["path"]).to eq spree.order_path(order)
+          expect(json_response["path"]).to eq order_path(order)
           expect(order.payments.completed.count).to be 1
 
           card = order.payments.completed.first.source
@@ -314,9 +334,13 @@ describe "checking out an order with a Stripe SCA payment method", type: :reques
 
       context "when the stripe API sends a url for the authorization of the transaction" do
         let(:payment_intent_authorize_response_mock) do
-          { status: 200, body: JSON.generate(id: payment_intent_id, object: "payment_intent",
-                                             next_source_action: { type: "authorize_with_url", authorize_with_url: { url: stripe_redirect_url }},
-                                             status: "requires_source_action" )}
+          { status: 200, body: JSON.generate(id: payment_intent_id,
+                                             object: "payment_intent",
+                                             next_source_action: {
+                                               type: "authorize_with_url",
+                                               authorize_with_url: { url: stripe_redirect_url }
+                                             },
+                                             status: "requires_source_action") }
         end
 
         it "redirects the user to the authorization stripe url" do

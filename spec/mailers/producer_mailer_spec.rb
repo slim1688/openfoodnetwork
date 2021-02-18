@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'yaml'
 
@@ -7,7 +9,7 @@ describe ProducerMailer, type: :mailer do
   before { setup_email }
 
   let!(:zone) { create(:zone_with_member) }
-  let!(:tax_rate) { create(:tax_rate, included_in_price: true, calculator: Spree::Calculator::DefaultTax.new, zone: zone, amount: 0.1) }
+  let!(:tax_rate) { create(:tax_rate, included_in_price: true, calculator: Calculator::DefaultTax.new, zone: zone, amount: 0.1) }
   let!(:tax_category) { create(:tax_category, tax_rates: [tax_rate]) }
   let(:s1) { create(:supplier_enterprise) }
   let(:s2) { create(:supplier_enterprise) }
@@ -48,10 +50,6 @@ describe ProducerMailer, type: :mailer do
   end
 
   let(:mail) { ProducerMailer.order_cycle_report(s1, order_cycle) }
-
-  it "should send an email when an order cycle is closed" do
-    expect(ActionMailer::Base.deliveries.count).to eq(1)
-  end
 
   it "sets a reply-to of the oc coordinator's email" do
     expect(mail.reply_to).to eq [order_cycle.coordinator.contact.email]
@@ -97,7 +95,7 @@ describe ProducerMailer, type: :mailer do
 
   it "sends no mail when the producer has no orders" do
     expect do
-      ProducerMailer.order_cycle_report(s3, order_cycle).deliver
+      ProducerMailer.order_cycle_report(s3, order_cycle).deliver_now
     end.to change(ActionMailer::Base.deliveries, :count).by(0)
   end
 
@@ -116,8 +114,8 @@ describe ProducerMailer, type: :mailer do
 
   private
 
-  def body_lines_including(mail, s)
-    mail.body.to_s.lines.select { |line| line.include? s }
+  def body_lines_including(mail, str)
+    mail.body.to_s.lines.select { |line| line.include? str }
   end
 
   def body_as_html(mail)

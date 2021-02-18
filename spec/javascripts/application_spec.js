@@ -12,8 +12,9 @@
 //= require textAngular-rangy.min.js
 //= require textAngular-sanitize.min.js
 //= require textAngular.min.js
-//= require moment
+//= require moment/min/moment.min.js
 //= require i18n
+//= require handlebars
 
 angular.module('templates', [])
 angular.module('uiGmapgoogle-maps', []);

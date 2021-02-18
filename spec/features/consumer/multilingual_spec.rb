@@ -1,16 +1,18 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature 'Multilingual', js: true do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include WebHelper
   include ShopWorkflow
   include UIComponentHelper
   include CookieHelper
 
-  it 'has two locales available' do
+  it 'has three locales available' do
     expect(Rails.application.config.i18n[:default_locale]).to eq 'en'
     expect(Rails.application.config.i18n[:locale]).to eq 'en'
-    expect(Rails.application.config.i18n[:available_locales]).to eq ['en', 'es']
+    expect(Rails.application.config.i18n[:available_locales]).to eq ['en', 'es', 'pt']
   end
 
   it '18n-js fallsback to default language' do # in backend it doesn't until we change enforce_available_locales to `true`
@@ -77,14 +79,14 @@ feature 'Multilingual', js: true do
 
       expect_menu_and_cookie_in_es
       expect(user.locale).to be_nil
-      quick_login_as user
+      login_as user
       visit root_path
 
       expect_menu_and_cookie_in_es
     end
 
     it 'updates user locale and stays in cookie after logout' do
-      quick_login_as user
+      login_as user
       visit root_path(locale: 'es')
       user.reload
 
@@ -124,8 +126,8 @@ feature 'Multilingual', js: true do
 
         expect(page).to have_content 'SHOPS'
 
-        find('ul.right li.language-switcher').click
-        within 'ul.right li.language-switcher ul.dropdown' do
+        find('.language-switcher').click
+        within '.language-switcher .dropdown' do
           expect(page).to have_link I18n.t('language_name', locale: :en), href: '?locale=en'
           expect(page).to have_link I18n.t('language_name', locale: :es, default: 'Language Name'), href: '?locale=es'
 

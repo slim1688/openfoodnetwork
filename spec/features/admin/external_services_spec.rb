@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature 'External services' do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
 
   describe "bugherd" do
     before do

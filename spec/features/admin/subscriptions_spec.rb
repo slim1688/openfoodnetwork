@@ -1,17 +1,19 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature 'Subscriptions' do
   include AdminHelper
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include WebHelper
 
   context "as an enterprise user", js: true do
-    let!(:user) { create_enterprise_user(enterprise_limit: 10) }
+    let!(:user) { create(:user) }
     let!(:shop) { create(:distributor_enterprise, owner: user, enable_subscriptions: true) }
     let!(:shop2) { create(:distributor_enterprise, owner: user, enable_subscriptions: true) }
     let!(:shop_unmanaged) { create(:distributor_enterprise, enable_subscriptions: true) }
 
-    before { quick_login_as user }
+    before { login_as user }
 
     context 'listing subscriptions' do
       let!(:subscription) { create(:subscription, shop: shop, with_items: true, with_proxy_orders: true) }
@@ -19,9 +21,9 @@ feature 'Subscriptions' do
       let!(:subscription_unmanaged) { create(:subscription, shop: shop_unmanaged, with_items: true, with_proxy_orders: true) }
 
       before do
-        subscription.update_attributes(shipping_fee_estimate: 3.5)
+        subscription.update(shipping_fee_estimate: 3.5)
         subscription.subscription_line_items.each do |sli|
-          sli.update_attributes(price_estimate: 5)
+          sli.update(price_estimate: 5)
         end
       end
 
@@ -172,7 +174,7 @@ feature 'Subscriptions' do
       let!(:order_cycle) { create(:simple_order_cycle, coordinator: shop, orders_open_at: 2.days.from_now, orders_close_at: 7.days.from_now) }
       let!(:outgoing_exchange) { order_cycle.exchanges.create(sender: shop, receiver: shop, variants: [test_variant, shop_variant], enterprise_fees: [enterprise_fee]) }
       let!(:schedule) { create(:schedule, order_cycles: [order_cycle]) }
-      let!(:payment_method) { create(:stripe_payment_method, name: 'Credit Card', distributors: [shop]) }
+      let!(:payment_method) { create(:stripe_connect_payment_method, name: 'Credit Card', distributors: [shop]) }
       let!(:shipping_method) { create(:shipping_method, distributors: [shop]) }
 
       before do
@@ -193,9 +195,7 @@ feature 'Subscriptions' do
         expect(page).to have_content 'can\'t be blank', count: 1
         expect(page).to have_content 'Oops! Please fill in all of the required fields...'
         find_field('begins_at').click
-        within(".ui-datepicker-calendar") do
-          find('.ui-datepicker-today').click
-        end
+        choose_today_from_datepicker
 
         click_button('Next')
         expect(page).to have_content 'BILLING ADDRESS'
@@ -319,7 +319,7 @@ feature 'Subscriptions' do
       let!(:variant3_oc) { create(:simple_order_cycle, coordinator: shop, orders_open_at: 2.days.from_now, orders_close_at: 7.days.from_now) }
       let!(:variant3_ex) { variant3_oc.exchanges.create(sender: shop, receiver: shop, variants: [variant3]) }
       let!(:payment_method) { create(:payment_method, distributors: [shop]) }
-      let!(:stripe_payment_method) { create(:stripe_payment_method, name: 'Credit Card', distributors: [shop]) }
+      let!(:stripe_payment_method) { create(:stripe_connect_payment_method, name: 'Credit Card', distributors: [shop]) }
       let!(:shipping_method) { create(:shipping_method, distributors: [shop]) }
       let!(:subscription) {
         create(:subscription,
@@ -412,7 +412,7 @@ feature 'Subscriptions' do
         let(:order) { proxy_order.initialise_order! }
         let(:line_item) { order.line_items.first }
 
-        before { line_item.update_attributes(quantity: 3) }
+        before { line_item.update(quantity: 3) }
 
         it "reports issues encountered during the update" do
           visit edit_admin_subscription_path(subscription)
@@ -431,7 +431,7 @@ feature 'Subscriptions' do
     end
 
     describe "allowed variants" do
-      let!(:customer) { create(:customer, enterprise: shop, allow_charges: true) }
+      let!(:customer) { create(:customer, enterprise: shop) }
       let!(:credit_card) { create(:stored_credit_card, user: customer.user) }
       let!(:shop_product) { create(:product, supplier: shop) }
       let!(:shop_variant) { create(:variant, product: shop_product, unit_value: "2000") }
@@ -457,7 +457,7 @@ feature 'Subscriptions' do
       let!(:enterprise_fee) { create(:enterprise_fee, amount: 1.75) }
       let!(:order_cycle) { create(:simple_order_cycle, coordinator: shop) }
       let!(:schedule) { create(:schedule, order_cycles: [order_cycle]) }
-      let!(:payment_method) { create(:stripe_payment_method, distributors: [shop]) }
+      let!(:payment_method) { create(:stripe_connect_payment_method, distributors: [shop]) }
       let!(:shipping_method) { create(:shipping_method, distributors: [shop]) }
 
       before do
@@ -468,6 +468,7 @@ feature 'Subscriptions' do
       end
 
       it "permit creating and editing of the subscription" do
+        customer.update_attributes(allow_charges: true)
         # Fill in other details
         fill_in_subscription_basic_details
         click_button "Next"
@@ -534,7 +535,7 @@ feature 'Subscriptions' do
   def add_variant_to_subscription(variant, quantity)
     row_count = all("#subscription-line-items .item").length
     variant_name = variant.full_name.present? ? "#{variant.name} - #{variant.full_name}" : variant.name
-    select2_search variant.name, from: I18n.t(:name_or_sku), dropdown_css: ".select2-drop", select_text: variant_name
+    select2_select variant.name, from: "add_variant_id", search: true, select_text: variant_name
     fill_in "add_quantity", with: quantity
     click_link "Add"
     expect(page).to have_selector("#subscription-line-items .item", count: row_count + 1)

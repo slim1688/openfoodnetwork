@@ -1,6 +1,10 @@
+# frozen_string_literal: true
+
+require 'spec_helper'
+
 describe AdjustmentMetadata do
-  it "is valid when build from factory" do
-    adjustment = create(:adjustment)
-    expect(adjustment).to be_valid
+  it "is valid when built from factory" do
+    adjustment_metadata = build(:adjustment_metadata)
+    expect(adjustment_metadata).to be_valid
   end
 end

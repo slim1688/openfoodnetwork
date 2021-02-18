@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 FactoryBot.define do
   factory :subscription, class: Subscription do
     shop { create :enterprise }
@@ -10,8 +12,8 @@ FactoryBot.define do
     begins_at { 1.month.ago }
 
     transient do
-      with_items false
-      with_proxy_orders false
+      with_items { false }
+      with_proxy_orders { false }
     end
 
     after(:create) do |subscription, proxy|
@@ -20,9 +22,8 @@ FactoryBot.define do
                                                           3,
                                                           subscription: subscription)
         subscription.order_cycles.each do |oc|
-          ex = oc.exchanges.outgoing.find_by_sender_id_and_receiver_id(
-            subscription.shop_id, subscription.shop_id
-          )
+          ex = oc.exchanges.outgoing.find_by(sender_id: subscription.shop_id,
+                                             receiver_id: subscription.shop_id)
           ex ||= create(:exchange, order_cycle: oc,
                                    sender: subscription.shop,
                                    receiver: subscription.shop,
@@ -45,6 +46,6 @@ FactoryBot.define do
   factory :subscription_line_item, class: SubscriptionLineItem do
     subscription
     variant
-    quantity 1
+    quantity { 1 }
   end
 end

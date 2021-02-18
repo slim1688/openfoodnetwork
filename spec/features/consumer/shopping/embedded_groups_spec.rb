@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature "Using embedded shopfront functionality", js: true do
@@ -37,7 +39,7 @@ feature "Using embedded shopfront functionality", js: true do
       on_embedded_page do
         within 'div#group-page' do
           expect(page).to have_no_selector 'div.contact-container'
-          expect(page).to have_no_content '#{group.address.address1}'
+          expect(page).to have_no_content group.address.address1.to_s
         end
       end
     end

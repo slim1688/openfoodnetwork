@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Spree::Admin::ReportsController, type: :controller do
@@ -65,7 +67,7 @@ describe Spree::Admin::ReportsController, type: :controller do
   context "Coordinator Enterprise User" do
     let!(:present_objects) { [orderA1, orderA2, orderB1, orderB2] }
 
-    before { login_as_enterprise_user [coordinator1] }
+    before { controller_login_as_enterprise_user [coordinator1] }
 
     describe 'Orders & Fulfillment' do
       it "shows all orders in order cycles I coordinate" do
@@ -79,7 +81,7 @@ describe Spree::Admin::ReportsController, type: :controller do
 
   # As a Distributor Enterprise user for distributor1
   context "Distributor Enterprise User" do
-    before { login_as_enterprise_user [distributor1] }
+    before { controller_login_as_enterprise_user [distributor1] }
 
     describe 'Orders and Distributors' do
       let!(:present_objects) { [orderA1, orderA2, orderB1, orderB2] }
@@ -90,18 +92,6 @@ describe Spree::Admin::ReportsController, type: :controller do
         expect(assigns(:search).result).to include(orderA1, orderB1)
         expect(assigns(:search).result).not_to include(orderA2)
         expect(assigns(:search).result).not_to include(orderB2)
-      end
-    end
-
-    describe 'Bulk Coop' do
-      let!(:present_objects) { [orderA1, orderA2, orderB1, orderB2] }
-
-      it "only shows orders that I have access to" do
-        spree_post :bulk_coop, q: {}
-
-        expect(resulting_orders).to     include(orderA1, orderB1)
-        expect(resulting_orders).not_to include(orderA2)
-        expect(resulting_orders).not_to include(orderB2)
       end
     end
 
@@ -144,40 +134,15 @@ describe Spree::Admin::ReportsController, type: :controller do
 
   # As a Supplier Enterprise user for supplier1
   context "Supplier" do
-    before { login_as_enterprise_user [supplier1] }
+    before { controller_login_as_enterprise_user [supplier1] }
 
     describe 'index' do
       it "loads reports relevant to producers" do
         spree_get :index
 
         report_types = assigns(:reports).keys
-        expect(report_types).to include "orders_and_fulfillment", "products_and_inventory", "packing" # and others
-        expect(report_types).to_not include "sales_tax"
-      end
-    end
-
-    describe 'Bulk Coop' do
-      context "where I have granted P-OC to the distributor" do
-        let!(:present_objects) { [orderA1, orderA2] }
-
-        before do
-          create(:enterprise_relationship, parent: supplier1, child: distributor1, permissions_list: [:add_to_order_cycle])
-        end
-
-        it "only shows product line items that I am supplying" do
-          spree_post :bulk_coop, q: {}
-
-          expect(resulting_products).to     include product1
-          expect(resulting_products).not_to include product2, product3
-        end
-      end
-
-      context "where I have not granted P-OC to the distributor" do
-        it "shows product line items that I am supplying" do
-          spree_post :bulk_coop
-
-          expect(resulting_products).not_to include product1, product2, product3
-        end
+        expect(report_types).to include :orders_and_fulfillment, :products_and_inventory, :packing # and others
+        expect(report_types).to_not include :sales_tax
       end
     end
 
@@ -228,7 +193,7 @@ describe Spree::Admin::ReportsController, type: :controller do
   end
 
   context "Products & Inventory" do
-    before { login_as_admin }
+    before { controller_login_as_admin }
 
     context "with distributors and suppliers" do
       let(:distributors) { [coordinator1, distributor1, distributor2] }
@@ -272,7 +237,7 @@ describe Spree::Admin::ReportsController, type: :controller do
   end
 
   context "My Customers" do
-    before { login_as_admin }
+    before { controller_login_as_admin }
 
     it "should have report types for customers" do
       expect(subject.report_types[:customers]).to eq([
@@ -323,7 +288,7 @@ describe Spree::Admin::ReportsController, type: :controller do
   end
 
   context "Admin" do
-    before { login_as_admin }
+    before { controller_login_as_admin }
 
     describe "users_and_enterprises" do
       let!(:present_objects) { [coordinator1] }

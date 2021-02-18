@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Admin::ColumnPreferencesController, type: :controller do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
 
   describe "bulk_update" do
     let!(:user1) { create(:user) }

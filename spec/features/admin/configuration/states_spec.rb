@@ -1,12 +1,15 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe "States" do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
+  include WebHelper
 
   let!(:country) { create(:country) }
 
   before(:each) do
-    quick_login_as_admin
+    login_as_admin
     @hungary = Spree::Country.create!(name: "Hungary", iso_name: "Hungary")
     Spree::Config[:default_country_id] = country.id
   end
@@ -25,7 +28,7 @@ describe "States" do
   end
 
   context "admin visiting states listing" do
-    let!(:state) { create(:state, country: country) }
+    let!(:state) { Spree::State.create(name: 'Alabama', country: country) }
 
     it "should correctly display the states" do
       visit spree.admin_country_states_path(country)
@@ -36,7 +39,7 @@ describe "States" do
   context "creating and editing states" do
     it "should allow an admin to edit existing states", js: true do
       go_to_states_page
-      set_select2_field("country", country.id)
+      select2_select country.name, from: "country"
 
       click_link "new_state_link"
       fill_in "state_name", with: "Calgary"
@@ -48,7 +51,7 @@ describe "States" do
 
     it "should allow an admin to create states for non default countries", js: true do
       go_to_states_page
-      set_select2_field "#country", @hungary.id
+      select2_select @hungary.name, from: "country"
       # Just so the change event actually gets triggered in this spec
       # It is definitely triggered in the "real world"
       page.execute_script("$('#country').trigger('change');")
@@ -64,8 +67,7 @@ describe "States" do
 
     it "should show validation errors", js: true do
       go_to_states_page
-      set_select2_field("country", country.id)
-
+      select2_select country.name, from: "country"
       click_link "new_state_link"
 
       fill_in "state_name", with: ""

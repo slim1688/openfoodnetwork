@@ -25,6 +25,9 @@ class Customer < ActiveRecord::Base
 
   before_create :associate_user
 
+  attr_accessor :gateway_recurring_payment_client_secret
+  attr_accessor :gateway_shop_id
+
   private
 
   def downcase_email
@@ -36,7 +39,7 @@ class Customer < ActiveRecord::Base
   end
 
   def associate_user
-    self.user = user || Spree::User.find_by_email(email)
+    self.user = user || Spree::User.find_by(email: email)
   end
 
   def check_for_orders

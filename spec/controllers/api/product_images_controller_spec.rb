@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Api
   describe ProductImagesController, type: :controller do
-    include AuthenticationWorkflow
+    include AuthenticationHelper
     render_views
 
     describe "uploading an image" do
@@ -14,8 +16,7 @@ module Api
       let(:image) { Rack::Test::UploadedFile.new(image_path, 'image/png') }
       let!(:product_without_image) { create(:product) }
       let!(:product_with_image) { create(:product_with_image) }
-
-      sign_in_as_admin!
+      let(:current_api_user) { create(:admin_user) }
 
       it "saves a new image when none is present" do
         xhr :post, :update_product_image, product_id: product_without_image.id, file: image, use_route: :product_images

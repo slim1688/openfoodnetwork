@@ -10,13 +10,10 @@
 //= require jquery-migrate-min
 //= require jquery_ujs
 //= require jquery.ui.all
-//= require jquery-ui-timepicker-addon
 //= require jquery.powertip
 //= require jquery.cookie
 //= require jquery.jstree/jquery.jstree
 //= require jquery.vAlign
-//= require jquery.horizontalNav
-//= require jquery.adaptivemenu
 //= require angular
 //= require angular-resource
 //= require angular-animate
@@ -26,16 +23,32 @@
 //= require angular-rails-templates
 //= require lodash.underscore.js
 
+// datetimepicker  (fil, nb)
+//= require flatpickr/dist/flatpickr.min
+//= require flatpickr/dist/l10n/ar
+//= require flatpickr/dist/l10n/cat
+//= require flatpickr/dist/l10n/cy
+//= require flatpickr/dist/l10n/de
+//= require flatpickr/dist/l10n/es
+//= require flatpickr/dist/l10n/fr
+//= require flatpickr/dist/l10n/it
+//= require flatpickr/dist/l10n/nl
+//= require flatpickr/dist/l10n/pl
+//= require flatpickr/dist/l10n/pt
+//= require flatpickr/dist/l10n/ru
+//= require flatpickr/dist/l10n/sv
+//= require flatpickr/dist/l10n/tr
+//= require shortcut-buttons-flatpickr/dist/shortcut-buttons-flatpickr.min
+
 // spree
-//= require spree
+//= require admin/spree/spree
 //= require admin/spree/spree-select2
 //= require modernizr
-//= require spin
 //= require equalize
 //= require css_browser_selector_dev
 //= require responsive-tables
 //= require admin/spree_paypal_express
-//= require admin/handlebar_extensions
+//= require admin/spree/handlebar_extensions
 
 // OFN specific
 //= require_tree ../templates/admin
@@ -72,16 +85,23 @@
 //= require textAngular.min.js
 //= require i18n/translations
 //= require darkswarm/i18n.translate.js
-//= require moment
-//= require moment/de.js
-//= require moment/en-gb.js
-//= require moment/es.js
-//= require moment/fr.js
-//= require moment/it.js
-//= require moment/nb.js
-//= require moment/pt-br.js
-//= require moment/pt.js
-//= require moment/sv.js
+//= require moment/min/moment.min.js
+//= require moment/locale/ar.js
+//= require moment/locale/ca.js
+//= require moment/locale/de.js
+//= require moment/locale/en-gb.js
+//= require moment/locale/es.js
+//= require moment/locale/fil.js
+//= require moment/locale/fr.js
+//= require moment/locale/it.js
+//= require moment/locale/nb.js
+//= require moment/locale/nl-be.js
+//= require moment/locale/pt-br.js
+//= require moment/locale/pt.js
+//= require moment/locale/ru.js
+//= require moment/locale/sv.js
+//= require moment/locale/tr.js
+//= require moment/locale/pl.js
 
 // foundation
 //= require ../shared/mm-foundation-tpls-0.9.0-20180826174721.min.js

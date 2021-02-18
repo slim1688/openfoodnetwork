@@ -1,5 +1,5 @@
 ar:
-  language_name: "الانجيلزي"
+  language_name: "عربي"
   activerecord:
     attributes:
       enterprise_fee:
@@ -9,10 +9,12 @@ ar:
         shipment_state: حالة الشحن
         completed_at: 'تم الانتهاء عند '
         number: 'رقم '
-        state: ولاية
+        state: محافظة
         email: الايميل الالكتروني للعميل
       spree/payment:
         amount: القيمة
+        state: محافظة
+        source: المصدر
       spree/product:
         primary_taxon: "نوع المنتج "
         supplier: "المورد"
@@ -21,8 +23,14 @@ ar:
         variant_unit_name: "اسم وحدة النوع"
       spree/credit_card:
         base: "بطاقة ائتمان"
+        number: "رقم "
+        month: "شهر"
+        verification_value: "قيمة التحقق"
+        year: "عام"
       order_cycle:
         orders_close_at: تاريخ الاغلاق
+      variant_override:
+        count_on_hand: "متوفر"
     errors:
       models:
         spree/user:
@@ -30,7 +38,11 @@ ar:
             email:
               taken: "يوجد حساب متصل بهذا الايميل.\nالرجاء الدخول او اعادة تعيين كلمة السر."
         spree/order:
-          no_card: لا يوجد بطاقة ائتمان معتمدة متاحة لاتمام عملية الدفع
+          no_card: لا توجد بطاقات ائتمان معتمدة لشحنها
+        spree/credit_card:
+          attributes:
+            base:
+              card_expired: "انتهت صلاحيته"
         order_cycle:
           attributes:
             orders_close_at:
@@ -45,12 +57,12 @@ ar:
       order_management/reports/enterprise_fee_summary/parameters:
         start_at: "البداية "
         end_at: "النهاية"
-        distributor_ids: "منافذ"
+        distributor_ids: "مراكز بيع"
         producer_ids: "المنتجين"
         order_cycle_ids: "دورات الطلب"
         enterprise_fee_ids: "أسماء الرسوم"
         shipping_method_ids: "طرق الشحن"
-        payment_method_ids: "طريقة الدفع"
+        payment_method_ids: "طرق الدفع"
     errors:
       messages:
         inclusion: "غير مدرجة في القائمة"
@@ -119,8 +131,8 @@ ar:
       subject: "%{enterprise} الآن على %{sitename}"
       email_welcome: "أهلا بك"
       email_registered: "الآن هو  جزء من"
-      email_userguide_html: "دليل المستخدم مع دعم مفصل لإعداد المنتج أو المحور الخاص بك هنا: %{link}"
-      userguide: "افتح دليل مستخدم شبكة الغذاء"
+      email_userguide_html: "دليل المستخدم مع دعم مفصل لإعداد واجهة المنتج أو مركز البيع الخاص بك هنا: %{link}"
+      userguide: "افتح دليل مستخدم شبكة الغذاء المفتوح الاردن - فلاحة جو"
       email_admin_html: "يمكنك إدارة حسابك عن طريق تسجيل الدخول إلى %{link} أو عن طريق النقر على cog في أعلى الجانب الأيمن من الصفحة الرئيسية ، واختيار الإدارة."
       admin_panel: "لوحة الادارة"
       email_community_html: "لدينا أيضًا منتدى عبر الإنترنت لمناقشات المجتمع المتعلقة ببرامج بشبكة الغذاء المفتوح والتحديات الفريدة لإدارة مؤسسة للأغذية. نحن نشجعك على الانضمام. نحن نتطور باستمرار وسوف تشكل مدخلاتك في هذا المنتدى ما سيحدث بعد ذلك. %{link}"
@@ -136,7 +148,7 @@ ar:
       instructions: "تم شحن طلبك"
       shipment_summary: "ملخص الشحن"
       subject: "إشعار الشحن"
-      thanks: "شكرا لك على اعمالك."
+      thanks: "شكرا لك على تعاملاتك."
       track_information: "معلومات التتبع : %{tracking}"
       track_link: "رابط التتبع: %{url}"
   subscription_mailer:
@@ -175,8 +187,8 @@ ar:
         title: فشل آخر (%{count} أوامر)
         explainer: فشلت المعالجة التلقائية لهذه الطلبات لسبب غير معروف. لا ينبغي أن يحدث هذا ، يرجى الاتصال بنا إذا كنت ترى هذا.
   home: "OFN"
-  title: شبكة الغذاء المفتوح
-  welcome_to: 'مرحبا بك في'
+  title: "شبكة الغذاء المفتوح"
+  welcome_to: "مرحبا بك في"
   site_meta_description: "نبدأ من الألف إلى الياء. مع المزارعين والمزارعين على استعداد لرواية قصصهم بفخر وحق. مع الموزعين على استعداد لتوصيل الأشخاص بالمنتجات بطريقة عادلة وبصدق. مع المشترين الذين يعتقدون أن أفضل قرارات التسوق الأسبوعية يمكن ..."
   search_by_name: البحث بالاسم أو الضاحية ...
   producers_join: المنتجون الأستراليون مدعوون الآن للانضمام إلى شبكة الغذاء المفتوح.
@@ -219,6 +231,7 @@ ar:
   enterprises: المؤسسات
   enterprise_groups: مجموعات
   reports: التقارير
+  listing_reports: قائمة التقارير
   variant_overrides: المخزون
   import: استيراد
   spree_products: منتجات Spree 
@@ -264,14 +277,24 @@ ar:
   backordered: "طلبات متأخرة"
   on hand: "متوفر"
   ship: "الشحن"
+  shipping_category: "نوع الشحن"
+  height: "الارتفاع"
+  width: "العرض"
+  depth: "العمق"
   actions:
     create_and_add_another: "إنشاء وإضافة آخر"
     create: "انشاء"
     cancel: "إلغاء"
+    resume: "اكمل"
     save: "حفظ"
     edit: "تعديل"
     update: "تحديث"
     delete: "حذف"
+    add: "إضافة"
+    cut: "قص"
+    paste: "لصق"
+    destroy: "الغاء"
+    rename: "إعادة تسمية"
   admin:
     begins_at: يبدأ عند
     begins_on: يبدأ في
@@ -319,6 +342,7 @@ ar:
     show_n_more: عرض %{num} أكثر
     choose: "أختر..."
     please_select: الرجاء اختيار ...
+    column_save_as_default: إحفظ كافتراض اساسي
     columns: أعمدة
     actions: أجراءات
     viewing: "عرض: %{current_view_name}"
@@ -329,6 +353,7 @@ ar:
     has_n_rules: "لديه %{num} قواعد"
     unsaved_confirm_leave: "هناك تغييرات لم يتم حفظها في هذه الصفحة. أكمل بدون حفظ؟"
     unsaved_changes: "لم تحفظ التغييرات"
+    available_units: "الوحدات المتاحة"
     shopfront_settings:
       embedded_shopfront_settings: "إعدادات واجهة المتجر المدمجة "
       enable_embedded_shopfronts: "تمكين واجهة المتجر المدمجة"
@@ -363,8 +388,10 @@ ar:
         title: "إعدادات Matomo"
         matomo_url: "العنوان الالكتروني ل Matomo "
         matomo_site_id: "معرف موقع Matomo"
-        info_html: "Matomo هو تحليلات الويب والجوال. يمكنك إما تنصيب Matomo محليًا أو استخدام خدمة استضافة سحابية. انظر <a href='http://matomo.org' target='_blank'>matomo.org</a> لمزيد من المعلومات."
+        matomo_tag_manager_url: "عنوان URL لبرنامج Matomo "
+        info_html: "ماتومو هو تطبيق تحليلات الويب والجوال. يمكنك اضافة Matomo محليًا أو استخدام خدمة مستضافة على السحابة. انظر <a href='http://matomo.org' target='_blank'>matomo.org</a> لمزيد من المعلومات."
         config_instructions_html: "هنا يمكنك تهيئة تكامل Matomo لشبكة الغذاء المفتوح. يجب أن يشير عنوان الالكتروني URL الخاص بـ Matomo أدناه إلى مثيل Matomo حيث سيتم إرسال معلومات تتبع المستخدم إلى ؛ إذا تم تركه فارغًا ، فسيتم تعطيل تتبع مستخدم Matomo. حقل معرف الموقع ليس إلزاميًا ولكنه مفيد إذا كنت تتعقب أكثر من موقع ويب على مثيل Matomo  ؛ يمكن العثور عليه على وحدة تحكم مثيل Matomo."
+        config_instructions_tag_manager_html: "يؤدي تعيين عنوان URL لبرنامج Matomo إلى تمكين Matomo . تتيح لك هذه الأداة إعداد أحداث التحليلات. يتم نسخ عنوان URL لبرنامج Matomo من قسم كود التثبيت في Manager. تأكد من تحديد الحاوية والبيئة المناسبة لأن هذه الخيارات تغير عنوان URL."
     customers:
       index:
         new_customer: "عميل جديد"
@@ -372,32 +399,36 @@ ar:
         duplicate_code: "هذا الكود مستخدم بالفعل"
         bill_address: "عنوان وصول الفواتير"
         ship_address: "عنوان الشحن"
-        update_address_success: 'تم تحديث العنوان بنجاح.'
-        update_address_error: 'آسف! يرجى إدخال جميع الحقول المطلوبة!'
-        edit_bill_address: 'تحرير عنوان الفواتير'
-        edit_ship_address: 'تحرير عنوان الشحن'
-        required_fileds: 'تتم الإشارة إلى الحقول المطلوبة بعلامة النجمة'
-        select_country: 'اختر الدولة'
-        select_state: 'اختر ولايه'
-        edit: 'تعديل'
-        update_address: 'تحديث العنوان'
-        confirm_delete: 'متأكد من ان يتم حذف؟'
+        balance: "الباقي"
+        update_address_success: "تم تحديث العنوان بنجاح."
+        update_address_error: "آسف! يرجى إدخال جميع الحقول المطلوبة!"
+        edit_bill_address: "تحرير عنوان الفواتير"
+        edit_ship_address: "تحرير عنوان الشحن"
+        required_fileds: "تتم الإشارة إلى الحقول المطلوبة بعلامة النجمة"
+        select_country: "اختر الدولة"
+        select_state: "اختر ولايه"
+        edit: "تعديل"
+        update_address: "تحديث العنوان"
+        confirm_delete: "متأكد من ان يتم حذف؟"
         search_by_email: "البحث عن طريق البريد الإلكتروني / الرمز ..."
-        guest_label: 'الخروج كضيف'
+        guest_label: "الخروج كضيف"
+        credit_owed: "الائتمان مدين"
+        balance_due: "الرصيد المستحق"
       destroy:
-        has_associated_orders: 'فشل الحذف: قام العميل بربط الطلبات مع متجره'
+        has_associated_orders: "فشل الحذف: قام العميل بربط الطلبات مع متجره"
     contents:
       edit:
         title: المحتوى
         header: الترويس
         home_page: الصفحة الرئيسية
         producer_signup_page: صفحة تسجيل المنتج
-        hub_signup_page: 'صفحة تسجيل المتجر '
+        hub_signup_page: 'صفحة تسجيل مركز البيع '
         group_signup_page: صفحة تسجيل المجموعة
         main_links: روابط القائمة الرئيسية
         footer_and_external_links: تذييل والروابط الخارجية
         your_content: المحتوى الخاص بك
         user_guide: دليل المستخدم
+        map: خريطة
     enterprise_fees:
       index:
         title: "رسوم الشركة"
@@ -469,6 +500,7 @@ ar:
         line_number: "السطر %{number}:"
         encoding_error: "يرجى التحقق من إعداد اللغة للملف المصدر والتأكد من حفظه بترميز UTF-8"
         unexpected_error: "واجه استيراد المنتج خطأ غير متوقع أثناء فتح الملف: %{error_message}"
+        malformed_csv: "صادف استيراد المنتج ملف CSV مشوه: %{error_message}"
       index:
         notice: "تنويه"
         beta_notice: "لا تزال هذه الميزة تجريبية: قد تواجه بعض الأخطاء أثناء استخدامها. من فضلك لا تتردد في الاتصال بالدعم."
@@ -570,6 +602,8 @@ ar:
       controls:
         back_to_my_inventory: العودة إلى المخزون الخاص بي
     orders:
+      edit:
+        order_sure_want_to: هل أنت متأكد أنك تريد %{event} هذا الطلب؟
       invoice_email_sent: 'تم إرسال فاتورة البريد الإلكتروني'
       order_email_resent: 'تم اعادة ارسال الطلب لبريدك الإلكتروني'
       bulk_management:
@@ -579,7 +613,7 @@ ar:
         order_date: "اكتمل في"
         max: "اعلى"
         product_unit: "المنتج: وحدة"
-        weight_volume: "الوزن / الحجم"
+        weight_volume: "الوزن / الحجم (جم)"
         ask: "يطلب؟"
         page_title: "ادارة طلب الجملة "
         actions_delete: "حذف المواد المختارة"
@@ -616,6 +650,9 @@ ar:
           acn_placeholder: على سبيل المثال. 123 456 789
           display_invoice_logo: عرض الشعار في الفواتير
           invoice_text: أضف نصًا مخصصًا في نهاية الفواتير
+          terms_and_conditions: "الأحكام والشروط"
+          remove_terms_and_conditions: "إزالة الملف"
+          uploaded_on: "تم الرفع في"
         contact:
           name: اسم
           name_placeholder: على سبيل المثال. برقوق غوستاف
@@ -638,6 +675,8 @@ ar:
           promo_image_note1: 'يرجى الملاحظة:'
           promo_image_note2: سيتم اقتصاص أي صورة ترويجية تم تحميلها هنا إلى 1200 × 260.
           promo_image_note3: يتم عرض صورة الترويجي في الجزء العلوي من صفحة الملف الشخصي للشركات والنوافذ المنبثقة.
+          remove_logo: "إزالة الصورة"
+          remove_promo_image: "إزالة الصورة"
         inventory_settings:
           text1: يمكنك اختيار إدارة مستويات المخزون والأسعار عبر
           inventory: المخزون
@@ -680,12 +719,12 @@ ar:
           ofn_uid: شبكة الغذاء المفتوح UID
           ofn_uid_tip: المعرف الفريد المستخدم لتحديد الشركة على شبكة الغذاء المفتوح.
         shipping_methods:
-          name: اسم
-          applies: ينطبق؟
-          manage: إدارة طرق الشحن
-          create_button: إنشاء طريقة شحن جديدة
-          create_one_button: إنشاء واحدة الآن
-          no_method_yet: ليس لديك أي طرق شحن حتى الآن.
+          name: "اسم"
+          applies: "نشيط؟"
+          manage: "إدارة طرق الشحن"
+          create_button: "إنشاء طريقة شحن جديدة"
+          create_one_button: "إنشاء واحدة الآن"
+          no_method_yet: "ليس لديك أي طرق شحن حتى الآن."
         shop_preferences:
           shopfront_requires_login: "واجهة المتجر مرئية للعام؟"
           shopfront_requires_login_tip: "اختر ما إذا كان يجب على العملاء تسجيل الدخول لعرض واجهة المحل أو إذا كان مرئيًا للجميع."
@@ -704,6 +743,10 @@ ar:
           enable_subscriptions_tip: "تمكين الاشتراكات وظيفيا ؟"
           enable_subscriptions_false: "تعليق"
           enable_subscriptions_true: "تمكين"
+          customer_names_in_reports: "أسماء العملاء في التقارير"
+          customer_names_tip: "قم بتمكين مورديك من رؤية أسماء عملائك في التقارير"
+          customer_names_false: "تعليق"
+          customer_names_true: "تمكين"
           shopfront_message: "رسالة واجهة المتجر"
           shopfront_message_placeholder: >
               رسالة اختيارية للترحيب بالعملاء وشرح كيفية التسوق معك. إذا تم إدخال
@@ -717,6 +760,7 @@ ar:
               للعملاء توقع فتحه مرة أخرى. يتم عرض هذا في متجرك فقط عندما لا يكون لديك
               دورات طلبات نشطة (على سبيل المثال ، المتجر مغلق).
           shopfront_category_ordering: "ترتيب فئة واجهة المتجر"
+          shopfront_category_ordering_note: "(من اعلى لاسفل)"
           open_date: "تاريخ الفتح "
           close_date: "تاريخ الاغلاق"
         social:
@@ -732,7 +776,7 @@ ar:
           confirm_modal:
             title: تواصل مع Stripe
             part1: Stripe هي خدمة معالجة دفع تسمح للمحلات على شبكة الغذاء المفتوح بقبول مدفوعات بطاقات الائتمان من العملاء.
-            part2: لاستخدام هذه الميزة ، يجب عليك توصيل حساب Stripe الخاص بك بـ شبكة الغذاء المفتوح. النقر فوق &quot;أوافق&quot; أدناه إلى إعادة توجيهك إلى موقع Stripe على الويب حيث يمكنك توصيل حساب Stripe الموجود ، أو إنشاء حساب جديد إذا لم يكن لديك حساب بالفعل.
+            part2: لاستخدام هذه الميزة ، يجب عليك توصيل حساب Stripe الخاص بك بـ شبكة الغذاء المفتوح. النقر فوق 'أوافق' أدناه إلى إعادة توجيهك إلى موقع Stripe على الويب حيث يمكنك توصيل حساب Stripe الموجود ، أو إنشاء حساب جديد إذا لم يكن لديك حساب بالفعل.
             part3: سيتيح هذا لشبكة الغذاء المفتوح  قبول مدفوعات بطاقات الائتمان من العملاء نيابة عنك. يرجى ملاحظة أنك سوف تحتاج إلى الحفاظ على حساب Stripe الخاص بك ، ودفع رسوم Stripe والتعامل مع أي عمليات رد المبالغ المدفوعة وخدمة العملاء بنفسك.
             i_agree: أنا موافق
             cancel: إلغاء
@@ -789,13 +833,13 @@ ar:
         sell_your_produce: بيع المنتجات الخاصة بك
         producer_shop_description_text: بيع منتجاتك مباشرة للعملاء من خلال واجهة متجر شبكة الغذاء المفتوح الخاصة بك.
         producer_shop_description_text2: متجر المنتج مخصص لمنتجاتك فقط ، إذا كنت ترغب في بيع المنتجات المنتجة خارج الموقع ، فحدد &quot;متجر المنتج&quot;.
-        producer_hub: نقطة بيع منتج
+        producer_hub: مركز بيع المنتج
         producer_hub_text: بيع المنتجات من انتاجك و انتاج الآخرين
         producer_hub_description_text: مؤسستك هي العمود الفقري لنظام الغذاء المحلي. يمكنك بيع المنتجات الخاصة بك وكذلك المنتجات المجمعة من المؤسسات الأخرى من خلال واجهة المحل الخاصة بك على شبكة الغذاء المفتوح.
         profile: الملف الشخصي فقط
         get_listing: الحصول على قائمة
         profile_description_text: يمكن للأشخاص العثور على شبكة الغذاء المفتوح والاتصال بك. ستكون مؤسستك مرئية على الخريطة ، وستكون قابلة للبحث في القوائم.
-        hub_shop: نقطة بيع متجر
+        hub_shop: 'متجر لمركز بيع '
         hub_shop_text: بيع المنتجات من الآخرين
         hub_shop_description_text: مؤسستك هي العمود الفقري لنظام الغذاء المحلي. يمكنك تجميع المنتجات من المؤسسات الأخرى ويمكنك بيعها من خلال متجرك على شبكة الغذاء المفتوح.
         choose_option: يرجى اختيار واحد من الخيارات المذكورة أعلاه.
@@ -820,16 +864,8 @@ ar:
       new:
         title: شركة جديدة
         back_link: العودة إلى قائمة المؤسسات
-      remove_logo:
-        remove: "إزالة الصورة"
-        removed_successfully: "تمت إزالة الشعار بنجاح"
-        immediate_removal_warning: "سيتم إزالة الشعار مباشرة بعد التأكيد."
-      remove_promo_image:
-        remove: "إزالة الصورة"
-        removed_successfully: "تمت إزالة الصورة الترويجية بنجاح"
-        immediate_removal_warning: "ستتم إزالة صورة الترويجي فور التأكيد."
       welcome:
-        welcome_title: مرحبا بكم في شبكة الغذاء المفتوح!
+        welcome_title: مرحبا بكم في شبكة الغذاء المفتوح الاردن - فلاحة جو !
         welcome_text: لقد نجحت في إنشاء
         next_step: الخطوة التالية
         choose_starting_point: 'اختر الحزمة الخاصة بك:'
@@ -856,6 +892,11 @@ ar:
         save_and_back_to_list: "حفظ والعودة إلى القائمة"
         choose_products_from: "اختر المنتجات من:"
       incoming:
+        incoming: "الوارد"
+        supplier: "المورد"
+        products: "منتجات"
+        receival_details: "تفاصيل الاستلام"
+        fees: "رسوم"
         save: "حفظ"
         save_and_next: "حفظ والتالي"
         next: "التالى"
@@ -866,6 +907,7 @@ ar:
         distributor: "الموزع"
         products: "منتجات"
         tags: "الاوسمة"
+        delivery_details: "تفاصيل التسليم"
         fees: "رسوم"
         previous: "السابق"
         save: "حفظ"
@@ -962,7 +1004,7 @@ ar:
       resend_email: إعادة إرسال البريد الإلكتروني
       has_no_payment_methods: "لا تحتوي %{enterprise} حاليًا على طريقة دفع"
       has_no_shipping_methods: "%{enterprise} لا يوجد لديها حاليا طريقة شحن"
-      email_confirmation: "تأكيد البريد الإلكتروني معلق. لقد أرسلنا رسالة تأكيد بالبريد الإلكتروني إلى %{email}."
+      email_confirmation: "تأكيد البريد الإلكتروني معلق. لقد أرسلنا لك رسالة تأكيد على البريد الإلكتروني إلى %{email}."
       not_visible: "%{enterprise} غير مرئي وبالتالي لا يمكن العثور عليه على الخريطة أو في عمليات البحث"
     reports:
       hidden: خفية
@@ -1015,18 +1057,22 @@ ar:
         name: "ملخص رسوم الشركات"
         description: "ملخص رسوم الشركات التي تم جمعها"
     subscriptions:
-      subscriptions: الاشتراكات
-      new: اشتراك جديد
-      create: إنشاء اشتراك
-      edit: تحرير الاشتراك
+      index:
+        title: "الاشتراكات"
+        new: "اشتراك جديد"
+      new:
+        title: "اشتراك جديد"
+      edit:
+        title: "تحرير الاشتراك"
       table:
         edit_subscription: تحرير الاشتراك
         pause_subscription: وقف مؤقت الاشتراك
         unpause_subscription: إلغاء الاشتراك المؤقت
         cancel_subscription: إلغاء الاشتراك
       filters:
-        query_placeholder: "البحث عن طريق البريد الإلكتروني ..."
+        query_placeholder: "ابحث عن طريق البريد الإلكتروني ..."
       setup_explanation:
+        title: "الاشتراكات"
         just_a_few_more_steps: 'فقط بضع خطوات أخرى قبل أن تبدأ:'
         enable_subscriptions: "تمكين الاشتراكات في واحد على الأقل من المتاجر الخاصة بك"
         enable_subscriptions_step_1_html: 1. انتقل إلى صفحة %{enterprises_link} ، وابحث عن متجرك ، وانقر على &quot;إدارة&quot;
@@ -1040,6 +1086,8 @@ ar:
         create_at_least_one_schedule_step_3: 3. انقر فوق &quot;+ جدول جديد&quot; ، واملأ النموذج
         once_you_are_done_you_can_html: بمجرد الانتهاء من ذلك ، يمكنك %{reload_this_page_link}
         reload_this_page: اعد تحميل هذه الصفحة
+      form:
+        create: "إنشاء اشتراك"
       steps:
         details: 1. التفاصيل الأساسية
         address: 2. العنوان
@@ -1113,12 +1161,17 @@ ar:
       destroy_attachment_does_not_exist: "الشعار غير موجود"
     enterprise_promo_image:
       destroy_attachment_does_not_exist: "الصورة الترويجية غير موجودة"
+    enterprise_terms_and_conditions:
+      destroy_attachment_does_not_exist: "ملف الشروط والأحكام غير موجود"
     orders:
       failed_to_update: "فشل في تحديث الطلب"
   checkout:
     already_ordered:
       cart: "سلة التسوق"
       message_html: "لديك طلب لدورة الطلب هذه بالفعل. تحقق من %{cart} لرؤية العناصر التي طلبتها من قبل. يمكنك أيضًا إلغاء العناصر طالما كانت دورة الطلب مفتوحة."
+    terms_and_conditions:
+      message_html: "أوافق على %{terms_and_conditions_link} للبائع."
+      link_text: "الأحكام والشروط"
     failed: "فشل الخروج. يرجى إعلامنا حتى نتمكن من معالجة طلبك."
   shops:
     hubs:
@@ -1129,41 +1182,53 @@ ar:
     menu:
       cart:
         cart: "سلة"
+      cart_sidebar:
+        checkout: "تابع للخروج"
+        edit_cart: "تعديل سلة التسوق"
+        items_in_cart_singular: "%{num} عنصر في سلة التسوق الخاصة بك"
+        items_in_cart_plural: "%{num} العناصر في سلة التسوق الخاصة بك"
+        close: "إغلاق"
+        cart_empty: "سلة التسوق فارغة"
+        take_me_shopping: "خذني للتسوق!"
       signed_in:
         profile: "الملف الشخصي"
       mobile_menu:
         cart: "سلة"
-      joyride:
-        checkout: "الخروج الآن"
-        already_ordered_products: "تم الطلب بالفعل في دورة الطلب هذه"
     register_call:
-      selling_on_ofn: "هل أنت مهتم بالحصول على شبكة الغذاء المفتوح؟"
+      selling_on_ofn: "هل أنت مهتم بالبيع من خلال منصة فلاحة جو؟ "
       register: "سجل هنا"
     footer:
       footer_secure: "آمن وموثوق به."
-      footer_secure_text: "تستخدم شبكة الغذاء المفتوح تشفير( SSL 2048 بت RSA) في كل مكان للحفاظ على خصوصية معلومات التسوق والدفع. لا تقوم خوادمنا بتخزين تفاصيل بطاقة الائتمان الخاصة بك ، وتتم معالجة المدفوعات بواسطة خدمات متوافقة مع PCI."
+      footer_secure_text: "تستخدم منصة فلاحة - شبكة الغذاء المفتوح تشفير  ( 2048 بت RSA) في كل مكان للحفاظ على خصوصية معلومات التسوق والدفع. لا تقوم خوادمنا بتخزين تفاصيل بطاقة الائتمان الخاصة بك ، وتتم معالجة المدفوعات بواسطة خدمات متوافقة مع PCI."
       footer_contact_headline: "أبق على اتصال"
-      footer_contact_email: "ارسل لنا عبر البريد الإلكتروني"
+      footer_contact_email: "راسلنا "
       footer_nav_headline: "التنقل"
       footer_join_headline: "انضم إلينا"
-      footer_join_body: "إنشاء قائمة أو متجر أو دليل المجموعة على شبكة الغذاء المفتوح."
+      footer_join_body: "إنشاء مركز تجاري أو متجر أو مجموعة على منصة فلاحة - شبكة الغذاء المفتوح."
       footer_join_cta: "اخبرني المزيد!"
       footer_legal_call: "اقراء"
       footer_legal_tos: "الأحكام والشروط"
       footer_legal_visit: "تجدنا على"
-      footer_legal_text_html: "شبكة الغذاء المفتوح عبترة عن منصة حرة ومفتوحة برمجيات المصدر. تم ترخيص المحتوى الخاص بنا باستخدام %{content_license} ورمزنا مع %{code_license}."
+      footer_legal_text_html: "فلاحة شبكة الغذاء المفتوح عبارة عن منصة حرة ومفتوحة البرمجيات. تم ترخيص المحتوى الخاص بنا باستخدام %{content_license} ورمزنا مع %{code_license}."
       footer_data_text_with_privacy_policy_html: "نحن نحرص على البيانات الخاصة بك. انظر %{privacy_policy} و %{cookies_policy}"
       footer_data_text_without_privacy_policy_html: "نحن نحرص على البيانات الخاصة بك. انظر %{cookies_policy} لدينا"
       footer_data_privacy_policy: "سياسة خاصة"
       footer_data_cookies_policy: "اتفاقية ملفات تعريف الارتباط"
   shop:
     messages:
-      login: "تسجيل الدخول"
-      signup: "سجل"
-      contact: "اتصل"
-      require_customer_login: "يمكن للعملاء المعتمدين فقط الوصول إلى هذا المتجر."
-      require_login_html: "إذا كنت بالفعل عميلًا معتمدًا ، فتابع %{login} أو %{signup} للمتابعة. تريد أن تبدأ التسوق هنا؟ يرجى %{contact} %{enterprise} واسأل عن الانضمام."
-      require_customer_html: "إذا كنت ترغب في بدء التسوق هنا ، فيرجى %{contact} %{enterprise} أن تسأل عن الانضمام."
+      customer_required:
+        login: "تسجيل الدخول"
+        signup: "سجل"
+        contact: "اتصل"
+        require_customer_login: "يمكن للعملاء المعتمدين فقط الوصول إلى هذا المتجر."
+        require_login_html: "إذا كنت عميلاً معتمدًا بالفعل ، %{login} أو %{signup} للمتابعة."
+        require_login_2_html: "تريد أن تبدأ التسوق هنا؟ من فضلك %{contact} %{enterprise} واسأل عن الانضمام."
+        require_customer_html: "إذا كنت ترغب في بدء التسوق هنا ، فيرجى %{contact} %{enterprise} أن تسأل عن الانضمام."
+      select_oc:
+        select_oc_html: "يرجى <span class='highlighted'>اختيار الوقت الذي تريده لطلبك</span> ، لمعرفة المنتجات المتوفرة."
+    products:
+      summary:
+        bulk: "جملة"
   card_could_not_be_updated: لا يمكن تحديث البطاقة
   card_could_not_be_saved: لا يمكن حفظ البطاقة
   spree_gateway_error_flash_for_checkout: "حدثت مشكلة في معلومات الدفع الخاصة بك: %{error}"
@@ -1191,14 +1256,14 @@ ar:
   ticket_column_item: "بند"
   ticket_column_unit_price: "سعر الوحدة"
   ticket_column_total_price: "السعر الكلي"
-  menu_1_title: "محلات"
-  menu_1_url: "/محلات"
+  menu_1_title: "متاجر"
+  menu_1_url: "/shops"
   menu_2_title: "خريطة"
-  menu_2_url: "/خريطة"
+  menu_2_url: "/map"
   menu_3_title: "المنتجين"
-  menu_3_url: "/ المنتجين"
+  menu_3_url: "/producers"
   menu_4_title: "مجموعات"
-  menu_4_url: "/مجموعات"
+  menu_4_url: "/groups"
   menu_5_title: "حول"
   menu_5_url: "https://about.openfoodnetwork.org.au/"
   menu_6_title: "الاتصال"
@@ -1213,13 +1278,13 @@ ar:
   footer_logo: "الشعار (220 × 76)"
   footer_facebook_url: "رابط الفيسبوك"
   footer_twitter_url: "رابط تويتر"
-  footer_instagram_url: "عنوان انستغرام"
+  footer_instagram_url: "رابط انستغرام"
   footer_linkedin_url: "رابط لينكدن"
   footer_googleplus_url: "رابط جوجل بلس"
   footer_pinterest_url: "رابط بنتيريست"
   footer_email: "البريد الإلكتروني"
   footer_links_md: "الروابط"
-  footer_about_url: "حول الرابط "
+  footer_about_url: "رابط نحن"
   user_guide_link: "رابط دليل المستخدم"
   name: اسم
   first_name: الاسم الاول
@@ -1249,7 +1314,7 @@ ar:
   days: أيام
   authorization_failure: "فشل التفويض"
   label_shop: "متجر"
-  label_shops: "محلات"
+  label_shops: "متاجر"
   label_map: "خريطة"
   label_producer: "المنتج"
   label_producers: "المنتجين"
@@ -1275,6 +1340,8 @@ ar:
   cart_updating: "جارٍ تحديث العربة ..."
   cart_empty: "السلة فارغة"
   cart_edit: "تعديل عربة التسوق"
+  item: "بند"
+  qty: "الكمية"
   card_number: رقم البطاقة
   card_securitycode: "رمز الحماية"
   card_expiry_date: تاريخ الانتهاء
@@ -1309,7 +1376,7 @@ ar:
       cookie_domain: "تم ظبطها من قبل:"
       cookie_session_desc: "يستخدم للسماح لموقع الويب بتذكر المستخدمين بين زيارات الصفحات ، على سبيل المثال ، تذكر العناصر الموجودة في سلة التسوق الخاصة بك."
       cookie_consent_desc: "يستخدم للحفاظ على حالة موافقة المستخدم لتخزين ملفات تعريف الارتباط"
-      cookie_remember_me_desc: "يستخدم إذا طلب المستخدم من الموقع أن يتذكره. يتم حذف ملف تعريف الارتباط هذا تلقائيًا بعد 12 يومًا. إذا كنت تريد حذف ملف تعريف الارتباط هذا كمستخدم ، فأنت تحتاج فقط إلى تسجيل الخروج. إذا كنت لا ترغب في تثبيت ملف تعريف الارتباط هذا على جهاز الكمبيوتر الخاص بك ، فلا يجب عليك تحديد مربع الاختيار &quot;تذكرني&quot; عند تسجيل الدخول."
+      cookie_remember_me_desc: "يستخدم إذا طلب المستخدم من الموقع أن يتذكره. يتم حذف ملف تعريف الارتباط هذا تلقائيًا بعد 12 يومًا. إذا كنت تريد حذف ملف تعريف الارتباط هذا كمستخدم ، فأنت تحتاج فقط إلى تسجيل الخروج. إذا كنت لا ترغب في تثبيت ملف تعريف الارتباط هذا على جهاز الكمبيوتر الخاص بك ، فلا يجب عليك تحديد مربع الاختيار \"تذكرني\" عند تسجيل الدخول."
       cookie_openstreemap_desc: "تستخدم من قبل موفر خرائط مفتوح المصدر  (OpenStreetMap) للتأكد من أنه لا يتلقى الكثير من الطلبات خلال فترة زمنية معينة ، لمنع إساءة استخدام خدماتهم."
       cookie_stripe_desc: "البيانات التي يتم جمعها بواسطة معالج الدفع لدينا Stripe للكشف عن الاحتيال https://stripe.com/cookies-policy/legal. لا تستخدم جميع المتاجر Stripe كوسيلة للدفع ، ولكن من الممارسات الجيدة منع الاحتيال لتطبيقه على جميع الصفحات. من المحتمل أن يقوم Stripe بإنشاء صورة لصفحاتنا التي تتفاعل عادةً مع واجهة برمجة التطبيقات الخاصة بهم ومن ثم وضع علامة على أي شيء غير عادي. لذلك فإن إعداد ملف تعريف الارتباط للشريط له وظيفة أوسع من مجرد توفير طريقة الدفع للمستخدم. يمكن أن تؤثر إزالتها على أمان الخدمة نفسها. يمكنك معرفة المزيد حول الشريط وقراءة سياسة الخصوصية الخاصة به على https://stripe.com/privacy."
       statistics_cookies: "إحصائيات ملفات تعريف الارتباط"
@@ -1334,30 +1401,30 @@ ar:
       cookies_policy_link: "اتفاقية ملفات تعريف الارتباط"
       cookies_accept_button: "قبول ملفات تعريف الارتباط"
   home_shop: تسوق الآن
-  brandstory_headline: "الغذاء ، غير مدمج."
-  brandstory_intro: "في بعض الأحيان تكون أفضل طريقة لإصلاح النظام هي بدء نظام جديد ..."
-  brandstory_part1: "نبدأ من الألف إلى الياء. مع المزارعين على استعداد لرواية قصصهم بفخر وحقا. مع الموزعين على استعداد لتوصيل الأشخاص بالمنتجات بطريقة عادلة وبصدق. مع المشترين الذين يعتقدون أن أفضل قرارات التسوق الأسبوعية يمكن أن تغير العالم بشكل خطير."
-  brandstory_part2: "ثم نحن بحاجة إلى وسيلة لجعلها حقيقية. طريقة لتمكين كل من يزرع, يبيع ويشتري الغذاء. طريقة لرواية جميع القصص ، للتعامل مع جميع الخدمات اللوجستية. طريقة لتحويل المعاملة إلى تطور كل يوم."
-  brandstory_part3: "لذلك نقوم ببناء سوق على الإنترنت يعمل على تسوية الملعب. بشكل شفاف ، وذلك لخلق علاقات حقيقية. إنه مفتوح المصدر ، لذلك يمتلكه الجميع. يتم توسيعه حسب المناطق والأمم ، لذا يبدأ الناس بالإصدارات في جميع أنحاء العالم."
-  brandstory_part4: "إنه يعمل في كل مكان. إنه يغير كل شيء."
-  brandstory_part5_strong: "نحن نسميها شبكة الغذاء المفتوح."
-  brandstory_part6: "كلنا نحب الطعام. الآن يمكننا أن نحب نظامنا الغذائي أيضا."
+  brandstory_headline: "قم بدعم الانتاج المحلي"
+  brandstory_intro: "سيساعدك المجتمع عبر الإنترنت في بناء مشروعك الغذائي بنجاح ..."
+  brandstory_part1: "تتيح منصة فلاحة - شبكة الغذاء المفتوح للمزارعين ببيع منتجاتهم عبر الإنترنت بسعر يناسبهم. لقد تم تصميمه خصيصًا لبيع الغذاء حتى يتمكن من التعامل مع الإجراءات الصعبة أو و بمعايير مناسبة للافراد و العائلات كعدد من حبات البندورة الى الكيلو انتهاءا بالطن, دزينة من البيض ، وضمةمن البقدونس ، ودجاجة كاملة بمختلف الاوزان ..."
+  brandstory_part2: "يمكن لمنتجي الغذاء إنشاء متجر الكتروني ، وتحصيل المدفوعات ، والبيع من خلال متاجر أخرى على المنصة والوصول إلى خدمات التوصيل بأسعار مخفضة. "
+  brandstory_part3: "يمكن لتجار الجملة دمج منصة فلاحة مع أنظمتهم الحالية وإدارة مجموعات الشراء لتزويد العملاء بمنتجاتهم من خلال شبكتنا الوطنية و مراكز البيع ومتاجر الأغذية."
+  brandstory_part4: "يمكن للمجتمعات أن تجمع المنتجين في منطقتهم المحلية لإنشاء أسواق افتراضية للمزارعين ، وبناء اقتصاد غذائي محلي مرن."
+  brandstory_part5_strong: "وما لا يقل أهمية عن المنصة نفسها هو القيم التي تدعمها."
+  brandstory_part6: "إذا كنت تبيع طعامًا جيدًا - كمزارع ، سوق زراعي، جمعية تعاونية منتجة، مركز طعام - فاختر برنامجًا يتوافق مع قيمك لبناء أنظمة غذائية للناس و الوطن. من خلال العمل الجماعي بدلاً من التنافس ، نشارك تكاليف تطوير برامج جديدة ، ونضمن أن مشروعنا مرن!"
   learn_body: "استكشف النماذج والقصص والموارد لدعمك لتطوير أعمالك التجارية أو مؤسستك الخاصة بالطعام الجيد. البحث عن التدريب والأحداث والفرص الأخرى للتعلم من أقرانهم."
   learn_cta: "اشعل حماسك"
   connect_body: "ابحث في الدلائل الكاملة للمنتجين والمراكز والمجموعات للعثور على تجار المواد الغذائية العادلة بالقرب منك. أدرج عملك أو مؤسستك على شبكة الغذاء المفتوحة حتى يتمكن المشترون من العثور عليك. انضم إلى المجتمع للحصول على المشورة وحل المشكلات معًا."
   connect_cta: "الذهاب لاستكشاف"
-  system_headline: "التسوق - إليك كيف تعمل."
-  system_step1: "1. البحث"
-  system_step1_text: "ابحث في متاجرنا المتنوعة والمستقلة للطعام المحلي الموسمي. البحث عن طريق الحي وفئة الطعام ، أو ما إذا كنت تفضل التسليم أو الاستلام."
-  system_step2: "2. متجر"
-  system_step2_text: "حول معاملاتك الغذائية المحلية بأسعار معقولة من مختلف المنتجين والمراكز. تعرف على القصص وراء طعامك والأشخاص الذين يصنعونه!"
-  system_step3: "3. الاستلام / التسليم"
-  system_step3_text: "تشبث بالتسليم ، أو تفضل بزيارة المنتج أو المحور للحصول على اتصال شخصي أكثر مع طعامك. التسوق الطعام متنوعة مثل الطبيعة المقصود منه."
-  cta_headline: "التسوق الذي يجعل العالم مكانًا أفضل."
+  system_headline: "البيع على منصة فلاحة 3 خطوات سهلة"
+  system_step1: "1. أنشئ مؤسستك"
+  system_step1_text: "قم بإعداد مؤسستك بالاسم والوصف والصور وتفاصيل الاتصال وروابط الوسائط الاجتماعية."
+  system_step2: "2. أضف منتجاتك"
+  system_step2_text: "أضف منتجات إلى متجرك - خاصة بك و / أو من منتجين آخرين من حولك. تعيين الصور والأوصاف والأسعار المخزون والأوزان والمقاييس المرنة!"
+  system_step3: "3. عمليات التسليم الخاصة بك"
+  system_step3_text: "قم بإعداد طرق الدفع. إنشاء نقاط استلام متعددة وتفاصيل التسليم. إنشاء أوامر متكررة وتوزيعات منتظمة."
+  cta_headline: "شبكة الغذاء المستدامة في المستقبل."
   cta_label: "أنا مستعد"
   stats_headline: "نحن بصدد إنشاء نظام غذائي جديد."
   stats_producers: "منتجي المواد الغذائية"
-  stats_shops: "محلات المواد الغذائية"
+  stats_shops: "متاجر المواد الغذائية"
   stats_shoppers: "المتسوقين الغذاء"
   stats_orders: "طلبات الغذاء"
   checkout_title: تابع للخروج
@@ -1399,7 +1466,7 @@ ar:
   order_total_price: مجموع
   order_includes_tax: (يشمل الضريبة)
   order_payment_paypal_successful: تمت معالجة دفعتك عبر PayPal بنجاح.
-  order_hub_info: معلومات نقطة البيع
+  order_hub_info: معلومات مركز البيع
   order_back_to_store: عودة للمخزن
   order_back_to_cart: العودة إلى السلة
   bom_tip: "استخدم هذه الصفحة لتغيير كميات المنتج عبر طلبات متعددة. يمكن أيضًا إزالة المنتجات من الطلبات تمامًا ، إذا لزم الأمر."
@@ -1497,6 +1564,7 @@ ar:
   shopping_groups_part_of: "جزء من:"
   shopping_producers_of_hub: "منتجو %{hub}:"
   enterprises_next_closing: "إغلاق الطلب التالي"
+  enterprises_currently_open: "الطلبات متاحة حاليا"
   enterprises_ready_for: "جاهز ل"
   enterprises_choose: "اختر عندما تريد طلبك:"
   maps_open: "افتح"
@@ -1518,18 +1586,24 @@ ar:
   hubs_distance: الأقرب إلى
   hubs_distance_filter: "أرني المتاجر بالقرب من %{location}"
   shop_changeable_orders_alert_html:
-    zero: لديك <a href='%{path}' target='_blank'>%{count} أوامر مع %{shop}</a> مفتوحة حاليًا للمراجعة. يمكنك إجراء تغييرات حتى %{oc_close}.
     one: طلبك مع <a href='%{path}' target='_blank'>%{shop} / %{order}</a> مفتوح للمراجعة. يمكنك إجراء تغييرات حتى %{oc_close}.
-    two: لديك <a href='%{path}' target='_blank'>%{count} أوامر مع %{shop}</a> مفتوحة حاليًا للمراجعة. يمكنك إجراء تغييرات حتى %{oc_close}.
     few: لديك <a href='%{path}' target='_blank'>%{count} أوامر مع %{shop}</a> مفتوحة حاليًا للمراجعة. يمكنك إجراء تغييرات حتى %{oc_close}.
     many: لديك <a href='%{path}' target='_blank'>%{count} أوامر مع %{shop}</a> مفتوحة حاليًا للمراجعة. يمكنك إجراء تغييرات حتى %{oc_close}.
     other: لديك <a href='%{path}' target='_blank'>%{count} أوامر مع %{shop}</a> مفتوحة حاليًا للمراجعة. يمكنك إجراء تغييرات حتى %{oc_close}.
   orders_changeable_orders_alert_html: تم تأكيد هذا الطلب ، ولكن يمكنك إجراء تغييرات حتى <strong>%{oc_close}</strong> .
-  products_clear_all: امسح الكل
+  products_clear: ازالة
   products_showing: "عرض:"
+  products_results_for: "نتائج"
   products_or: "أو"
+  products_and: "و"
+  products_filters_in: "في"
   products_with: مع
-  products_search: "البحث عن طريق المنتج أو المنتج"
+  products_search: "بحث..."
+  products_filter_by: "مرشح بواسطة"
+  products_filter_selected: "تم الاختيار"
+  products_filter_heading: "المرشحات"
+  products_filter_clear: "ازالة"
+  products_filter_done: "تم"
   products_loading: "جارٍ تحميل المنتجات ..."
   products_updating_cart: "جارٍ تحديث سلة المشتريات..."
   products_cart_empty: "السلة فارغة"
@@ -1540,14 +1614,16 @@ ar:
   products_update_error_msg: "فشل الحفظ."
   products_update_error_data: "فشل الحفظ بسبب بيانات غير صالحة:"
   products_changes_saved: "تم حفظ التغييرات."
+  products_no_results_html: "عذرا ، لم يتم العثور على نتائج لـ %{query}"
+  products_clear_search: "مسح البحث"
   search_no_results_html: "عذرًا ، لم يتم العثور على نتائج لـ %{query}. جرب بحث آخر؟"
   components_profiles_popover: "لا تملك ملفات التعريف واجهة متجر على شبكة الغذاء المفتوح ، ولكن قد يكون لها متجر على ارض الواقع أو عبر الإنترنت في أي مكان آخر"
   components_profiles_show: "إظهار الملفات الشخصية"
   components_filters_nofilters: "لا يوجد مرشحات"
   components_filters_clearfilters: "مسح جميع المرشحات"
   groups_title: مجموعات
-  groups_headline: المجموعات / المناطق
-  groups_text: "كل منتج فريد من نوعه. كل الأعمال لديها شيء مختلف للعرض. مجموعاتنا هي مجموعات من المنتجين والمحاور والموزعين الذين يشتركون في شيء مثل الموقع أو سوق المزارعين أو الفلسفة. هذا يجعل تجربة التسوق أسهل. لذلك استكشف مجموعاتنا وقمنا بتنظيمها لك."
+  groups_headline: المجموعات
+  groups_text: "كل منتج فريد من نوعه. كل الأعمال لديها شيء مختلف للعرض. مجموعاتنا هي مجموعات من المنتجين ومراكز البيع والموزعين الذين يشتركون في خصلة مثل الموقع أو سوق المزارعين أو الفلسفة. هذا يجعل تجربة التسوق أسهل. لذلك استكشف مجموعاتنا التي قمنا بتنظيمها لك."
   groups_search: "البحث عن اسم أو كلمة أساسية"
   groups_no_groups: "لم يتم العثور على مجموعات"
   groups_about: "معلومات عنا"
@@ -1609,22 +1685,22 @@ ar:
   register_title: تسجيل
   sell_title: "تسجيل "
   sell_headline: "الحصول على شبكة الغذاء المفتوح!"
-  sell_motivation: "اعرض طعامك الجميل."
+  sell_motivation: "اعرض منتجاتك الرائعة."
   sell_producers: "المنتجين"
-  sell_hubs: "منافذ"
+  sell_hubs: "مراكز البيع"
   sell_groups: "مجموعات"
   sell_producers_detail: "قم بإعداد ملف تعريف لعملك على شكبة الغذاء المفتوح في دقائق معدودة. في أي وقت يمكنك ترقية ملف التعريف الخاص بك إلى متجر على الإنترنت وبيع منتجاتك مباشرة للعملاء."
   sell_hubs_detail: "قم بإنشاء ملف تعريف للشركة طعام أو المؤسسة الخاصة بك على شبكة الغذاء المفتوح. في أي وقت يمكنك ترقية ملف التعريف الخاص بك إلى متجر متعدد المنتجين."
   sell_groups_detail: "قم بإعداد دليل مخصص للمؤسسات (المنتجين والمؤسسات الغذائية الأخرى) لمنطقتك أو لمؤسستك."
   sell_user_guide: "اكتشف المزيد في دليل المستخدم الخاص بنا."
-  sell_listing_price: "الإدراج في شبكة الغذاء المفتوح مجاني. فتح وتشغيل متجر على شبكة الغذاء المفتوح مجاني يصل إلى 500 دولار من المبيعات الشهرية. إذا كنت تبيع أكثر ، يمكنك اختيار مساهمة مجتمعك بين 1 ٪ و 3 ٪ من المبيعات. لمزيد من التفاصيل حول الأسعار ، تفضل بزيارة قسم Software Platform من خلال الرابط &quot;حول&quot; في القائمة العلوية."
-  sell_embed: "يمكننا أيضًا تضمين متجر شبكة الغذاء المفتوح في موقع الويب المخصص الخاص بك أو إنشاء موقع ويب مخصص لشبكة الأغذية المحلية لمنطقتك."
+  sell_listing_price: "ادراج منتجاتك في منصة فلاحة - شبكة الغذاء المفتوح مجاني. قم بفتح وتشغيل متجرك على منصة فلاحة - شبكة الغذاء المفتوح بشكل مجاني إلى ان تصل مبيعاتك الشهرية الى  500 دينار . إذا كنت تبيع أكثر ، فيمكنك اختيار مساهمة مجتمعك بين 1 ٪ و 3 ٪ من المبيعات. لمزيد من التفاصيل حول الأسعار ، تفضل بزيارة قسم Software Platform من خلال الرابط \"حول\" في القائمة العلوية."
+  sell_embed: "يمكننا أيضًا تضمين متجرك على منصة فلاحة - شبكة الغذاء المفتوح في موقع الويب الخاص بك أو إنشاء موقع ويب مخصص لشبكة الأغذية المحلية لمنطقتك."
   sell_ask_services: "اسألنا عن خدمات شبكة الغذاء المفتوح."
   shops_title: محلات
   shops_headline: التسوق ، التحول.
   shops_text: ينمو الغذاء في دورات ، ويحصد المزارعون في دورات ، ونحن نطلب الطعام في دورات. إذا وجدت دورة طلب مغلقة ، فراجعها قريبًا.
-  shops_signup_title: الاشتراك كنقطة بيع
-  shops_signup_headline: مراكز غذاء ، غير محدود.
+  shops_signup_title: الاشتراك كمركز بيع
+  shops_signup_headline: مراكز بيع الاغذية ، غير محدود.
   shops_signup_motivation: مهما كان النموذج الخاص بك ، نحن ندعمك. ومع ذلك قمت بتغيير ، نحن معك. نحن غير ربحيين ومستقلين ومنفتحين. نحن شركاء البرنامج الذين حلمت بهم.
   shops_signup_action: انظم الان
   shops_signup_pricing: حسابات الشركات
@@ -1658,9 +1734,7 @@ ar:
   orders_could_not_cancel: "عذرًا ، تعذر إلغاء الطلب"
   orders_cannot_remove_the_final_item: "لا يمكن إزالة العنصر الأخير من الطلب ، يرجى إلغاء الطلب بدلاً من ذلك."
   orders_bought_items_notice:
-    zero: "%{count} البنود الإضافية المؤكدة بالفعل لدورة الطلب هذه"
-    one: "تم تأكيد عنصر إضافي بالفعل لدورة الطلب هذه"
-    two: "%{count} البنود الإضافية المؤكدة بالفعل لدورة الطلب هذه"
+    one: تم بالفعل تأكيد عنصر إضافي لدورة الطلب هذه
     few: "%{count} البنود الإضافية المؤكدة بالفعل لدورة الطلب هذه"
     many: "%{count} البنود الإضافية المؤكدة بالفعل لدورة الطلب هذه"
     other: "%{count} البنود الإضافية المؤكدة بالفعل لدورة الطلب هذه"
@@ -1683,7 +1757,7 @@ ar:
   password: كلمه السر
   remember_me: تذكرنى
   are_you_sure: "هل أنت واثق؟"
-  orders_open: الطلب مفتوح
+  orders_open: "الطلب مفتوح"
   closing: "إغلاق"
   going_back_to_home_page: "الرجوع إلى الصفحة الرئيسية"
   creating: انشاء
@@ -1867,7 +1941,6 @@ ar:
   shop_for_products_html: "متجر لمنتجات <span class=\"turquoise\">%{enterprise}</span> على:"
   change_shop: "تغيير المتجر إلى:"
   shop_at: "تسوق الآن عبر:"
-  price_breakdown: "تفاصيل السعر الكامل"
   admin_fee: "رسوم الاشراف"
   sales_fee: "رسوم المبيعات"
   packing_fee: "رسوم التعبئة"
@@ -1899,6 +1972,7 @@ ar:
   admin_enterprise_relationships_permits: "تسمح"
   admin_enterprise_relationships_seach_placeholder: "بحث"
   admin_enterprise_relationships_button_create: "انشاء"
+  admin_enterprise_relationships_to: "إلى"
   admin_enterprise_groups: "مجموعات المؤسسة"
   admin_enterprise_groups_name: "اسم"
   admin_enterprise_groups_owner: "المالك"
@@ -1927,6 +2001,8 @@ ar:
   supplier: "المورد"
   product_name: "اسم المنتج"
   product_description: "وصف المنتج"
+  permalink: "الرابط الثابت"
+  shipping_categories: "فئات الشحن"
   units: "حجم الوحدة"
   coordinator: "منسق"
   distributor: "الموزع"
@@ -1936,9 +2012,13 @@ ar:
   delivery_method: طريقة التوصيل
   fee_type: "نوع الرسوم"
   tax_category: "الفئة الضريبية"
+  description: "وصف"
+  display: "عرض"
+  tags: "الاوسمة"
   calculator: "آلة حاسبة"
   calculator_values: "القيم المحوسبة"
   calculator_settings_warning: "إذا كنت تقوم بتغيير نوع الحاسبة ، فيجب عليك الحفظ أولاً قبل أن تتمكن من تحرير إعدادات الحاسبة"
+  calculator_preferred_unit_error: "يجب أن تكون كجم أو رطل"
   flat_percent_per_item: "نسبة ثابتة (لكل بند)"
   flat_rate_per_item: "سعر ثابت (لكل بند)"
   flat_rate_per_order: "تسعيرة ثابته (لكل طلب)"
@@ -1962,7 +2042,7 @@ ar:
   loading_customers: "تحميل العملاء"
   no_customers_found: "لم يتم العثور على العملاء"
   go: "اذهب"
-  hub: "نقطة بيع"
+  hub: "مركز بيع"
   producer: "المنتج"
   product: "المنتج"
   price: "السعر"
@@ -1979,7 +2059,7 @@ ar:
   spree_admin_enterprises_fees: "رسوم الشركة"
   spree_admin_enterprises_none_create_a_new_enterprise: "إنشاء مؤسسة جديدة"
   spree_admin_enterprises_none_text: "ليس لديك أي مؤسسات حتى الآن"
-  spree_admin_enterprises_tabs_hubs: "نقاط بيع"
+  spree_admin_enterprises_tabs_hubs: "مراكز بيع"
   spree_admin_enterprises_producers_manage_products: "إدارة المنتجات"
   spree_admin_enterprises_create_new_product: "إنشاء منتج جديد"
   spree_admin_single_enterprise_alert_mail_confirmation: "يرجى تأكيد عنوان البريد الإلكتروني ل"
@@ -2001,12 +2081,12 @@ ar:
   spree_classification_primary_taxon_error: "Taxon %{taxon} هو التصنيف الأساسي %{product} ولا يمكن حذفه"
   spree_order_availability_error: "لا يمكن لموزع أو دورة طلب توفير المنتجات في سلة التسوق"
   spree_order_populator_error: "لا يمكن لهذا الموزع أو دورة الطلب توفير جميع المنتجات في سلة التسوق. الرجاء اختيار آخر."
+  spree_order_cycle_error: "الرجاء اختيار دورة الطلب لهذا الطلب."
   spree_order_populator_availability_error: "هذا المنتج غير متوفر من الموزع المختار أو دورة الطلب."
   spree_distributors_error: "يجب تحديد مركز واحد على الأقل"
   spree_user_enterprise_limit_error: "^ %{email} غير مسموح به لامتلاك أي مؤسسات أخرى (الحد الأقصى هو %{enterprise_limit})."
   spree_variant_product_error: يجب أن يكون لديك نوع واحد على الأقل
   your_profil_live: "ملفك الشخصي نشط"
-  on_ofn_map: "على خريطة شبكة الغذاء المفتوح"
   see: "نرى"
   live: "نشط"
   manage: "يدير"
@@ -2023,6 +2103,8 @@ ar:
   remove_tax: "إزالة الضريبة"
   first_name_begins_with: "الاسم الأول يبدأ بـ"
   last_name_begins_with: "اسم العائلة يبدأ بـ"
+  shipping_method: "طريقة الشحن"
+  new_order: "طلب جديد"
   enterprise_tos_link: "شروط المؤسسة لخدمة الرابط"
   enterprise_tos_message: "نريد العمل مع أشخاص يشاركوننا أهدافنا وقيمنا. على هذا النحو ، نطلب من المؤسسات الجديدة الموافقة على"
   enterprise_tos_link_text: "شروط الخدمة."
@@ -2035,12 +2117,13 @@ ar:
   admin_share_zipcode: "الرمز البريدي"
   admin_share_country: "بلد"
   admin_share_state: "ولاية"
-  hub_sidebar_hubs: "منافذ"
+  hub_sidebar_hubs: "مراكز بيع"
   hub_sidebar_none_available: "لا شيء متاح"
   hub_sidebar_manage: "يدير"
   hub_sidebar_at_least: "يجب تحديد مركز واحد على الأقل"
   hub_sidebar_blue: "أزرق"
   hub_sidebar_red: "أحمر"
+  order_cycles_closed_for_hub: "المحور الذي حددته مغلق مؤقتًا للطلبات. الرجاء معاودة المحاولة في وقت لاحق."
   report_customers_distributor: "الموزع"
   report_customers_supplier: "المورد"
   report_customers_cycle: "ترتيب الدورة"
@@ -2048,7 +2131,7 @@ ar:
   report_customers_csv: "تنزيل بتنسيق CSV"
   report_producers: "المنتجين:"
   report_type: "نوع التقرير:"
-  report_hubs: "المراكز:"
+  report_hubs: "مراكز البيع :"
   report_payment: "طرق الدفع:"
   report_distributor: "موزع:"
   report_payment_by: 'المدفوعات حسب النوع'
@@ -2072,10 +2155,10 @@ ar:
   report_header_address: عنوان
   report_header_billing_address: عنوان وصول الفواتير
   report_header_relationship: العلاقة
-  report_header_hub: نقطة بيع
-  report_header_hub_address: عنوان المركز
-  report_header_to_hub: إلى المركز
-  report_header_hub_code: رمز المركز
+  report_header_hub: مركز بيع
+  report_header_hub_address: عنوان مركز البيع
+  report_header_to_hub: 'إلى مركز البيع '
+  report_header_hub_code: رمز مركز البيع
   report_header_code: الشفرة
   report_header_paid: دفع؟
   report_header_delivery: توصيل؟
@@ -2231,6 +2314,8 @@ ar:
   payment_processing_failed: "لا يمكن معالجة الدفع ، يرجى التحقق من التفاصيل التي أدخلتها"
   payment_method_not_supported: "طريقة الدفع هذه غير مدعومة. يرجى اختيار واحد آخر."
   payment_updated: "تم تحديث الدفع"
+  cannot_perform_operation: "تعذر تحديث الدفع"
+  action_required: "الإجراء مطلوب"
   inventory_settings: "إعدادات المخزون"
   tag_rules: "قواعد الوسم"
   shop_preferences: "تفضيلات المتجر"
@@ -2246,6 +2331,7 @@ ar:
   enterprise_name_error: "لقد اتخذت بالفعل. إذا كانت هذه هي مؤسستك وترغب في المطالبة بالملكية ، أو إذا كنت ترغب في التداول مع هذا المشروع ، فيرجى الاتصال بالمدير الحالي لملف التعريف هذا على %{email}."
   enterprise_owner_error: "^ %{email} غير مسموح به لامتلاك أي مؤسسات أخرى (الحد الأقصى هو %{enterprise_limit})."
   enterprise_role_uniqueness_error: "^ هذا الدور موجود بالفعل."
+  enterprise_terms_and_conditions_type_error: "يسمح فقط بملفات PDF"
   inventory_item_visibility_error: يجب أن تكون صحيحة أو خاطئة
   product_importer_file_error: "خطأ: لم يتم تحميل الملف"
   product_importer_spreadsheet_error: "لا يمكن معالجة الملف: ملف غير صالح"
@@ -2275,6 +2361,7 @@ ar:
   order_cycles_email_to_producers_notice: 'رسائل البريد الإلكتروني المراد إرسالها إلى المنتجين تم وضعها في قائمة الانتظار للإرسال.'
   order_cycles_no_permission_to_coordinate_error: "لا تملك أي من مؤسساتك إذنًا لتنسيق دورة الطلب"
   order_cycles_no_permission_to_create_error: "ليس لديك إذن لإنشاء دورة طلب تنسقها تلك المؤسسة"
+  order_cycle_closed: "تم إغلاق دورة الطلب التي حددتها للتو. حاول مرة اخرى!"
   back_to_orders_list: "العودة إلى قائمة الطلب"
   no_orders_found: "لم يتم العثور على أية طلبات"
   order_information: "معلومات الطلب"
@@ -2287,6 +2374,7 @@ ar:
   js:
     saving: 'حفظ...'
     changes_saved: 'تم حفظ التغييرات.'
+    authorising: "تفويض ..."
     save_changes_first: حفظ التغييرات أولا.
     all_changes_saved: تم حفظ جميع التغييرات
     unsaved_changes: لم تحفظ التغييرات
@@ -2296,17 +2384,23 @@ ar:
     error: خطأ
     unavailable: غير متوفره
     profile: الملف الشخصي
-    hub: نقطة بيع
+    hub: مركز بيع
     shop: متجر
     choose: أختر
     resolve_errors: يرجى حل الأخطاء التالية
     more_items: "+ %{count} ايضا"
     default_card_updated: تم تحديث البطاقة الافتراضية
+    default_card_voids_auth: سيؤدي تغيير بطاقتك الافتراضية إلى إزالة تفويضات المتاجر الحالية لشحنها. يمكنك إعادة تفويض المحلات التجارية بعد تحديث البطاقة الافتراضية. هل ترغب في تغيير البطاقة الافتراضية؟"
+    cart:
+      add_to_cart_failed: >
+          حدثت مشكلة أثناء إضافة هذا المنتج إلى عربة التسوق. ربما أصبح غير متوفر أو
+          أن المحل يغلق.
     admin:
       enterprise_limit_reached: "لقد وصلت إلى الحد القياسي للمؤسسات لكل حساب. اكتب %{contact_email} إذا كنت بحاجة إلى زيادته."
       modals:
-        got_it: فهمتك
+        got_it: "فهمتك"
         close: "إغلاق"
+        continue: "تابع"
         invite: "ادعو"
         invite_title: "دعوة مستخدم غير مسجل"
         tag_rule_help:
@@ -2324,12 +2418,20 @@ ar:
           customer_tagged_rules_text: >
               من خلال إنشاء قواعد متعلقة بوسم عميل معين ، يمكنك تجاوز السلوك الافتراضي
               (سواء كان لإظهار أو إخفاء عناصر) للعملاء الذين لديهم وسم محدد.
+        terms_and_conditions_info:
+          title: "تحميل الشروط والأحكام"
+          message_1: "الشروط والأحكام هي العقد المبرم بينك وبين البائع والمتسوق. إذا قمت بتحميل ملف هنا ، يجب على المتسوقين قبول الشروط والأحكام الخاصة بك لإكمال عملية الدفع. بالنسبة للمتسوق ، سيظهر هذا على شكل مربع اختيار عند الخروج يجب تحديده من أجل متابعة عملية الدفع. نوصي بشدة بتحميل الشروط والأحكام بما يتماشى مع التشريعات الوطنية."
+          message_2: "سيُطلب من المتسوقين قبول البنود والشروط مرة واحدة فقط. ومع ذلك ، إذا قمت بتغيير الشروط والأحكام ، فسيُطلب من المتسوقين مرة أخرى قبولها قبل أن يتمكنوا من الدفع."
+        terms_and_conditions_warning:
+          title: "تحميل الشروط والأحكام"
+          message_1: "سيتعين على جميع المشترين الموافقة عليهم مرة واحدة عند الخروج. إذا قمت بتحديث الملف ، فسيتعين على جميع المشترين الموافقة عليهم مرة أخرى عند الخروج."
+          message_2: "بالنسبة للمشترين الذين لديهم اشتراكات ، يجب أن ترسل إليهم الشروط والأحكام (أو التغييرات عليها) عبر البريد الإلكتروني في الوقت الحالي ، ولن يخطرهم أي شيء بهذه الشروط والأحكام الجديدة."
       panels:
         save: حفظ
         saved: تم الحفظ
         saving: حفظ
         enterprise_package:
-          hub_profile: الملف الشخصي للمركز
+          hub_profile: الملف الشخصي لمركز البيع
           hub_profile_cost: "التكلفة: دائما مجانا"
           hub_profile_text1: >
               يمكن للأشخاص العثور على شبكة الغذاء المفتوح والاتصال بك. ستكون مؤسستك
@@ -2337,7 +2439,7 @@ ar:
           hub_profile_text2: >
               سيكون لديك دائمًا ملف تعريف ، وإجراء اتصالات داخل نظام الأغذية المحلي
               الخاص بك من خلال شبكة الغذاء المفتوح.
-          hub_shop: نقطة بيع متجر
+          hub_shop: متجر مركز بيع
           hub_shop_text1: >
               مؤسستك هي العمود الفقري لنظام الغذاء المحلي. يمكنك تجميع المنتجات من
               المؤسسات الأخرى ويمكنك بيعها من خلال متجرك على شبكة الغذاء المفتوح.
@@ -2371,8 +2473,8 @@ ar:
               بك.
           producer_shop_text2: >
               متجر المنتج مخصص لمنتجاتك فقط ، إذا كنت ترغب في بيع المنتجات التي يتم
-              إنتاجها / إنتاجها خارج الموقع ، فيرجى تحديد &quot;مركز المنتج&quot;.
-          producer_hub: نقطة بيع منتج
+              إنتاجها / إنتاجها خارج الموقع ، فيرجى تحديد "مركز المنتج".
+          producer_hub: مركز بيع منتج
           producer_hub_text1: >
               مؤسستك هي العمود الفقري لنظام الغذاء المحلي. يمكنك بيع المنتجات الخاصة
               بك وكذلك المنتجات المجمعة من المؤسسات الأخرى من خلال واجهة المحل الخاصة
@@ -2475,6 +2577,8 @@ ar:
           processing: "قيد المعالجة"
           void: "فارغ"
           invalid: "غير صالحة"
+        quantity_adjusted: "مخزون غير كافٍ. تم تحديث البند إلى الكمية القصوى المتاحة."
+        quantity_unchanged: "الكمية لم تتغير عن المبلغ السابق."
       resend_user_email_confirmation:
         resend: "إعادة إرسال"
         sending: "إعادة إرسال..."
@@ -2505,6 +2609,15 @@ ar:
         error_saving: "خطأ في حفظ الاشتراك"
         new:
           please_select_a_shop: "يرجى اختيار متجر"
+      enterprises:
+        form:
+          images:
+            removed_logo_successfully: "تمت إزالة الشعار بنجاح"
+            immediate_logo_removal_warning: "سيتم إزالة الشعار مباشرة بعد التأكيد."
+            removed_promo_image_successfully: "تمت إزالة الصورة الترويجية بنجاح"
+            immediate_promo_image_removal_warning: "ستتم إزالة صورة الترويجي فور التأكيد."
+            immediate_terms_and_conditions_removal_warning: "ستتم إزالة ملف الشروط والأحكام فورًا بعد التأكيد."
+            removed_terms_and_conditions_successfully: "تمت إزالة ملف الشروط والأحكام بنجاح"
     insufficient_stock: "مخزون غير متوفر ، تبقى %{on_hand}"
     out_of_stock:
       reduced_stock_available: انخفاض المخزون المتاح
@@ -2513,6 +2626,15 @@ ar:
           إليك ما تغير:
       now_out_of_stock: الآن لا يوجد مخزون.
       only_n_remainging: "الآن ليس لديه %{num} متبقية."
+    shopfront:
+      variant:
+        add_to_cart: "إضافة"
+        in_cart: "في السلة"
+        quantity_in_cart: "%{quantity} في السلة"
+      bulk_buy_modal:
+        min_quantity: "اقل كمية "
+        max_quantity: "اعلى كمية"
+      price_breakdown: "تفاصيل السعر"
     variants:
       on_demand:
         'yes': "حسب الطلب"
@@ -2574,10 +2696,15 @@ ar:
       users:
         order: "طلب"
     registration:
-      welcome_to_ofn: "مرحبا بكم في شبكة الغذاء المفتوح!"
+      welcome_to_ofn: "مرحبا بكم في شبكة الغذاء المفتوح الاردن - فلاحة جو!"
       signup_or_login: "البدء بالتسجيل (أو تسجيل الدخول)"
       have_an_account: "هل لديك حساب؟"
       action_login: "تسجيل الدخول الآن."
+    stripe_elements:
+      unknown_error_from_stripe: |
+          كانت هناك مشكلة في إعداد بطاقتك في بوابة المدفوعات الخاصة بنا.
+          يرجى تحديث الصفحة والمحاولة مرة أخرى ، إذا فشلت مرة أخرى ،
+          يرجى الاتصال بنا للحصول على الدعم.
   inflections:
     each:
       zero: "كل"
@@ -2586,6 +2713,13 @@ ar:
       few: "كل"
       many: "كل"
       other: "كل"
+    bunch:
+      zero: "عناقيد"
+      one: "حفنة"
+      two: "عناقيد"
+      few: "عناقيد"
+      many: "عناقيد"
+      other: "عناقيد"
     pack:
       zero: "حزم"
       one: "رزمة"
@@ -2593,6 +2727,13 @@ ar:
       few: "حزم"
       many: "حزم"
       other: "حزم"
+    box:
+      zero: "مربعات"
+      one: "صندوق"
+      two: "مربعات"
+      few: "مربعات"
+      many: "مربعات"
+      other: "بكسات"
     bottle:
       zero: "زجاجات"
       one: "زجاجة"
@@ -2600,6 +2741,62 @@ ar:
       few: "زجاجات"
       many: "زجاجات"
       other: "زجاجات"
+    jar:
+      zero: "الجرار"
+      one: "إناء"
+      two: "الجرار"
+      few: "الجرار"
+      many: "الجرار"
+      other: "مرتبان"
+    head:
+      zero: "رؤساء"
+      one: "رئيس"
+      two: "رؤساء"
+      few: "رؤساء"
+      many: "رؤساء"
+      other: "رؤوس"
+    bag:
+      zero: "أكياس"
+      one: "كيس"
+      two: "أكياس"
+      few: "أكياس"
+      many: "أكياس"
+      other: "أكياس"
+    loaf:
+      zero: "أرغفة"
+      one: "رغيف"
+      two: "أرغفة"
+      few: "أرغفة"
+      many: "أرغفة"
+      other: "أرغفة"
+    single:
+      zero: "الفردي"
+      one: "غير مرتبطة"
+      two: "الفردي"
+      few: "الفردي"
+      many: "الفردي"
+      other: "الفردي"
+    tub:
+      zero: "أحواض"
+      one: "حوض"
+      two: "أحواض"
+      few: "أحواض"
+      many: "أحواض"
+      other: "أحواض"
+    punnet:
+      zero: "سلات"
+      one: "إناء"
+      two: "سلات"
+      few: "سلات"
+      many: "سلات"
+      other: "سلات"
+    packet:
+      zero: "الحزم"
+      one: "رزمة"
+      two: "الحزم"
+      few: "الحزم"
+      many: "الحزم"
+      other: "الحزم"
     item:
       zero: "العناصر"
       one: "بند"
@@ -2621,6 +2818,62 @@ ar:
       few: "الوحدات"
       many: "الوحدات"
       other: "الوحدات"
+    serve:
+      zero: "يخدم"
+      one: "تخدم"
+      two: "يخدم"
+      few: "يخدم"
+      many: "يخدم"
+      other: "خدمة"
+    tray:
+      zero: "صواني"
+      one: "صينية"
+      two: "صواني"
+      few: "صواني"
+      many: "صواني"
+      other: "صواني"
+    piece:
+      zero: "قطع"
+      one: "قطعة"
+      two: "قطع"
+      few: "قطع"
+      many: "قطع"
+      other: "قطع"
+    pot:
+      zero: "الأواني"
+      one: "وعاء"
+      two: "الأواني"
+      few: "الأواني"
+      many: "الأواني"
+      other: "اصص"
+    bundle:
+      zero: "حزم"
+      one: "حزمة"
+      two: "حزم"
+      few: "حزم"
+      many: "حزم"
+      other: "حزم"
+    flask:
+      zero: "قوارير"
+      one: "قارورة"
+      two: "قوارير"
+      few: "قوارير"
+      many: "قوارير"
+      other: "قوارير"
+    basket:
+      zero: "سلال"
+      one: "سلة"
+      two: "سلال"
+      few: "سلال"
+      many: "سلال"
+      other: "سلال"
+    sack:
+      zero: "أكياس"
+      one: "كيس"
+      two: "أكياس"
+      few: "أكياس"
+      many: "أكياس"
+      other: "أكياس"
   producers:
     signup:
       start_free_profile: "ابدأ بملف تعريف مجاني ، وتوسع عندما تكون جاهزًا!"
@@ -2677,6 +2930,9 @@ ar:
   customer_details: "تفاصيل العميل"
   adjustments: "التعديلات"
   payments: "المدفوعات"
+  return_authorizations: "عودة التراخيص"
+  credit_owed: "الائتمان مدين"
+  new_adjustment: "تعديل جديد"
   payment: "دفعة"
   payment_method: "طريقة الدفع او السداد"
   shipment: "الشحنة"
@@ -2700,6 +2956,7 @@ ar:
   previous: "السابق"
   last: "الاخير"
   spree:
+    more: "أكثر"
     your_order_is_empty_add_product: "طلبك فارغ ، يرجى البحث عن المنتج أعلاه وإضافته"
     add_product: "أضف منتج"
     name_or_sku: "الاسم أو SKU (أدخل أول 4 أحرف على الأقل من اسم المنتج)"
@@ -2722,6 +2979,8 @@ ar:
     delete: "حذف"
     cannot_set_shipping_method_without_address: "لا يمكن ضبط طريقة الشحن حتى يتم تقديم تفاصيل العميل."
     no_tracking_present: "لم يتم تقديم تفاصيل التتبع."
+    tracking: "تتبع"
+    tracking_number: "أرقام التتبع"
     order_total: "مجموع الطلب "
     customer_details: "تفاصيل العميل"
     customer_search: "بحث العملاء"
@@ -2743,9 +3002,20 @@ ar:
     adjustments: "التعديلات"
     continue: "تابع"
     fill_in_customer_info: "يرجى ملء معلومات العملاء"
+    credit_card: "بطاقة ائتمان"
     new_payment: "دفعة جديد"
     capture: "إلتقاط"
     void: "فارغ"
+    login: "تسجيل الدخول"
+    password: "كلمه السر"
+    signature: "التوقيع"
+    solution: "المحاليل"
+    landing_page: "الصفحة المقصودة"
+    server: "الخادم"
+    test_mode: "وضع الاختبار"
+    logourl: "رابط الشعار"
+    are_you_sure_delete: "هل أنت متأكد أنك تريد حذف هذا السجل؟"
+    confirm_delete: "تأكيد الحذف"
     configurations: "تهيئة"
     general_settings: "الاعدادات العامة"
     site_name: "اسم الموقع"
@@ -2773,21 +3043,13 @@ ar:
     smtp_send_copy_to_this_addresses: "يرسل نسخة من جميع الرسائل الصادرة إلى هذا العنوان. لعناوين متعددة ، افصل بينها بفواصل."
     intercept_email_address: "اعتراض عنوان البريد الإلكتروني"
     intercept_email_instructions: "تجاوز مستلم البريد الإلكتروني واستبداله بهذا العنوان."
-    image_settings: "إعدادات الصورة"
-    image_settings_warning: "ستحتاج إلى تجديد الصور المصغرة إذا قمت بتحديث أنماط مشبك الورق. استخدم rap paperclip: refresh: الصور المصغرة CLASS = Spree :: Image للقيام بذلك."
-    attachment_default_style: نمط المرفقات
-    attachment_default_url: "المرفقات عنوان URL الافتراضي"
-    attachment_path: "مسار المرفقات"
-    attachment_styles: "أنماط الورق"
-    attachment_url: "مرفقات URL"
-    add_new_style: "إضافة نمط جديد"
-    image_settings_updated: "تم تحديث إعدادات الصورة بنجاح."
     tax_categories: "فئات الضرائب"
     listing_tax_categories: "قائمة فئات الضرائب"
     back_to_tax_categories_list: "العودة إلى قائمة فئات الضرائب"
     tax rate: "معدلات الضريبة"
     new_tax_rate: "معدل الضريبة الجديد"
     tax_category: "الفئة الضريبية"
+    tax_rates: "معدلات الضريبة"
     rate: "معدل"
     tax_rate_amount_explanation: "معدلات الضرائب هي مبلغ عشري للمساعدة في العمليات الحسابية ، (أي إذا كان معدل الضريبة 5٪ ، فأدخل 0.05)"
     included_in_price: "المدرجة في السعر"
@@ -2810,12 +3072,11 @@ ar:
     abbreviation: "الاختصار"
     new_state: "محافظة جديدة"
     payment_methods: "طرق الدفع"
-    new_payment_method: "طريقة الدفع الجديدة"
-    provider: "مزود"
     taxonomies: "التصنيفات"
     new_taxonomy: "تصنيف جديد"
     back_to_taxonomies_list: "العودة إلى قائمة التصنيفات"
     shipping_methods: "طرق الشحن"
+    shipping_method: "طريقة الشحن"
     shipping_categories: "فئات الشحن"
     new_shipping_category: "فئة الشحن الجديدة"
     back_to_shipping_categories: "العودة إلى فئات الشحن"
@@ -2857,20 +3118,44 @@ ar:
     inventory_error_flash_for_insufficient_quantity: "المواد في سلة التسوق غير متاح."
     inventory: المخزون
     zipcode: الرمز البريدي
-    weight: الوزن (لكل كجم)
+    weight: الوزن (لكل كجم أو رطل)
     error_user_destroy_with_orders: "لا يمكن حذف المستخدمين الذين لديهم طلبات مكتملة"
     cannot_create_payment_without_payment_methods: "لا يمكنك إنشاء دفعة لطلب بدون تحديد طرقة الدفع."
     please_define_payment_methods: "يرجى تحديد بعض طرق الدفع أولاً."
     options: "خيارات"
+    has_no_shipped_units: "لا يوجد لديه طلبات مشحونة"
+    successfully_created: '%{resource} تم إنشاؤه بنجاح!'
+    successfully_updated: 'تم تحديث %{resource} بنجاح!'
+    payment_method: "طريقة الدفع او السداد"
+    payment_processing_failed: "لا يمكن معالجة الدفع ، يرجى التحقق من التفاصيل التي أدخلتها"
+    not_available: "غير متاح"
+    order_populator:
+      out_of_stock: '%{item} غير متوفر.'
     actions:
       update: "تحديث"
+      cancel: "إلغاء"
+    shared:
+      error_messages:
+        errors_prohibited_this_record_from_being_saved:
+          one: "خطأ 1 منع حفظ هذا السجل:"
+          few: "منعت أخطاء %{count} حفظ هذا السجل:"
+          many: "منعت أخطاء %{count} حفظ هذا السجل:"
+          other: "منعت أخطاء %{count} حفظ هذا السجل:"
+        there_were_problems_with_the_following_fields: "كانت هناك مشاكل مع الحقول التالية"
+      payments_list:
+        date_time: "التاريخ / الوقت"
+        amount: "القيمة"
+        payment_method: "طريقة الدفع او السداد"
+        payment_state: "حالة الدفعة"
     errors:
       messages:
+        included_price_validation: "لا يمكن تحديده إلا إذا قمت بتعيين منطقة ضريبية افتراضية"
         blank: "لا يمكن أن تكون فارغة"
     layouts:
       admin:
-        header:
-          store: متجر
+        login_nav:
+          header:
+            store: متجر
     admin:
       tab:
         dashboard: "لوحة العرض"
@@ -2894,7 +3179,6 @@ ar:
         index:
           inherits_properties_checkbox_hint: "وراثة الخصائص من %{supplier}؟ (ما لم يتم تجاوزه أعلاه)"
           add_product_properties: "إضافة خصائص المنتج"
-          select_from_prototype: "حدد من النموذج الأولي"
       properties:
         index:
           properties: "الخصائص"
@@ -2931,7 +3215,7 @@ ar:
           product: "المنتج"
           quantity_shipped: "الكمية التي تم شحنها"
           quantity_returned: "الكمية المرتجعة"
-          return_quantity: "عودة الكمية"
+          return_quantity: "ارجاع الكمية"
           amount: "القيمة"
           rma_value: "قيمة RMA"
           reason: "السبب"
@@ -2987,6 +3271,8 @@ ar:
           active_products:
             zero: "ليس لديك أي منتجات نشطة."
             one: "لديك منتج نشط واحد"
+            few: "لديك %{count} من المنتجات النشطة"
+            many: "لديك %{count} من المنتجات النشطة"
             other: "لديك %{count} من المنتجات النشطة"
         order_cycles:
           order_cycles: "دورات الطلب"
@@ -2994,6 +3280,8 @@ ar:
           you_have_active:
             zero: "ليس لديك أي دورات طلب نشطة."
             one: "لديك دورة طلب نشطة واحدة."
+            few: "لديك %{count} دورات طلب نشط."
+            many: "لديك %{count} دورات طلب نشط."
             other: "لديك %{count} دورات طلب نشط."
           manage_order_cycles: "ادارة دورات الطلب"
       shipping_methods:
@@ -3005,9 +3293,8 @@ ar:
           zone: "منطقة"
           calculator: "آلة حاسبة"
           display: "عرض"
-          both: "على حد سواء"
-          front_end: "الواجهة "
-          back_end: "عودة النهاية"
+          both: "كل من تسجيل الخروج والمكتب الخلفي"
+          back_end: "المكتب الخلفي فقط"
           no_shipping_methods_found: "لم يتم العثور على طرق الشحن"
         new:
           new_shipping_method: "طريقة الشحن الجديدة"
@@ -3019,14 +3306,30 @@ ar:
         form:
           categories: "التصنيفات"
           zones: "مناطق"
-          both: "على حد سواء"
-          front_end: "الواجهة "
-          back_end: "عودة النهاية"
+          both: "كل من تسجيل الخروج والمكتب الخلفي"
+          back_end: "المكتب الخلفي فقط"
+          deactivation_warning: "يمكن أن يؤدي إلغاء تنشيط طريقة الشحن إلى اختفاء طريقة الشحن من قائمتك. بدلاً من ذلك ، يمكنك إخفاء طريقة الشحن من صفحة الخروج عن طريق تعيين الخيار\"عرض\" إلى\"المكتب الخلفي فقط\"."
       payment_methods:
+        index:
+          payment_methods: "طريقة الدفع"
+          new_payment_method: "طريقة الدفع الجديدة"
+          name: "الاسم"
+          products_distributor: "الموزع"
+          provider: "مزود"
+          environment: "بيئة"
+          display: "عرض"
+          active: "نشط"
+          both: "على حد سواء"
+          front_end: "الخروج فقط"
+          back_end: "المكتب الخلفي فقط"
+          active_yes: "نعم"
+          active_no: "لا"
+          no_payment_methods_found: "لم يتم العثور على طرق دفع"
         new:
           new_payment_method: "طريقة الدفع الجديدة"
           back_to_payment_methods_list: "العودة إلى قائمة طرق الدفع"
         edit:
+          new: "جديد"
           editing_payment_method: "تحرير طريقة الدفع"
           back_to_payment_methods_list: "العودة إلى قائمة طرق الدفع"
         stripe_connect:
@@ -3042,11 +3345,34 @@ ar:
           account_id: معرف الحساب
           business_name: الاسم التجاري
           charges_enabled: تم تمكين الدفع
+        form:
+          name: "الاسم"
+          description: "وصف"
+          environment: "بيئة"
+          display: "عرض"
+          active: "نشط"
+          active_yes: "نعم"
+          active_no: "لا"
+          both: "كل من تسجيل الخروج والمكتب الخلفي"
+          front_end: "الخروج فقط"
+          back_end: "المكتب الخلفي فقط"
+          tags: "الاوسمة"
+          deactivation_warning: "يمكن أن يؤدي إلغاء تنشيط طريقة الدفع إلى اختفاء طريقة الدفع من قائمتك. بدلاً من ذلك ، يمكنك إخفاء طريقة الدفع من صفحة الخروج عن طريق تعيين الخيار \"عرض\" إلى\"المكتب الخلفي فقط\"."
+        providers:
+          provider: "مزود"
+          check: "النقد / التحويل الإلكتروني / إلخ. (المدفوعات التي لا تتطلب المصادقة التلقائية)"
+          paypalexpress: "باي بال اكسبريس"
+          stripeconnect: "Stripe SCA"
+          stripesca: "Stripe SCA"
+          bogus: "Bogus"
+          bogussimple: "BogusSimple"
       payments:
         source_forms:
           stripe:
             error_saving_payment: خطأ في حفظ الدفعة
             submitting_payment: تقديم الدفعة ...
+          paypal:
+            no_payment_via_admin_backend: لا يمكن التقاط مدفوعات Paypal في Backoffice
       products:
         image_upload_error: "لم يتم التعرف على صورة المنتج. يرجى تحميل صورة بتنسيق PNG أو JPG."
         new:
@@ -3100,6 +3426,8 @@ ar:
           bulk_coop_allocation: 'معظم التعاونية - تخصيص'
           bulk_coop_packing_sheets: 'معظم التعاونية - صحائف التعبئة'
           bulk_coop_customer_payments: ' الجمعية التعاونية - مدفوعات العملاء بالجملة'
+        customer_names_message:
+          customer_names_tip: "إذا كانت أسماء العملاء مخفية للطلبات التي قدمتها ، فيمكنك الاتصال بالموزع والسؤال عما إذا كان بإمكانهم تحديث تفضيلات متجرهم للسماح لمورديهم بمشاهدة أسماء العملاء."
       users:
         index:
           listing_users: "قائمة المستخدمين"
@@ -3141,19 +3469,29 @@ ar:
           price: "السعر"
           display_as: "عرض ب"
           display_name: "اسم العرض"
+          display_as_placeholder: 'على سبيل المثال 2 كجم'
+          display_name_placeholder: 'على سبيل المثال طماطم'
         autocomplete:
+          out_of_stock: "غير متوفر"
           producer_name: "المنتج"
           unit: "وحدة"
       shared:
         sortable_header:
           name: "الاسم"
+          number: "رقم "
+          state: "ولاية"
+          payment_state: "حالة الدفعة"
+          shipment_state: "حالة الشحن"
+          email: "البريد الإلكتروني"
+          total: "المجموع"
+      general_settings:
         edit:
           legal_settings: "الإعدادات القانونية"
           cookies_consent_banner_toggle: "عرض راية موافقة ملفات تعريف الارتباط"
-          privacy_policy_url: "URL سياسة الخصوصية"
+          privacy_policy_url: "رابط سياسة الخصوصية"
           enterprises_require_tos: "يجب على المؤسسات قبول شروط الخدمة"
           cookies_policy_matomo_section: "عرض قسم Matomo في صفحة سياسة ملفات تعريف الارتباط"
-          footer_tos_url: "شروط الخدمة URL"
+          footer_tos_url: "رابط شروط الخدمة "
     checkout:
       payment:
         stripe:
@@ -3169,10 +3507,9 @@ ar:
           or_enter_new_card: "أو أدخل تفاصيل البطاقة الجديدة:"
           remember_this_card: تذكر هذه البطاقة؟
     date_picker:
-      format: '٪ س-٪ م-%d'
-      js_format: 'يوم-شهر-سنة'
+      now: "الآن"
     orders:
-      error_flash_for_unavailable_items: "المادة في سلة التسوق غير متاح."
+      error_flash_for_unavailable_items: "عنصر في سلة التسوق الخاصة بك أصبح غير متوفر. يرجى تحديث الكميات المحددة."
       edit:
         login_to_view_order: "يرجى تسجيل الدخول لعرض طلبك."
       bought:
@@ -3200,15 +3537,54 @@ ar:
       invalid: غير صالحة
     order_mailer:
       cancel_email:
-        customer_greeting: "مرحبًا %{name}!"
-        instructions: "تم إلغاء طلبك. يرجى الاحتفاظ بمعلومات الإلغاء هذه بسجلاتك."
-        order_summary_canceled: "ملخص الطلب [ملغى]"
+        customer_greeting: "عزيزي %{name} ،"
+        instructions_html: "تم إلغاء طلبك مع <strong>%{distributor}</strong> . يرجى الاحتفاظ بمعلومات الإلغاء هذه في سجلاتك."
+        dont_cancel: "إذا غيرت رأيك أو لا ترغب في إلغاء هذا الطلب ، فيرجى الاتصال بـ %{email}"
+        order_summary_canceled_html: "<strong>ملخص الطلب # %{number} [ملغي]</strong>"
+        details: "إليك تفاصيل ما طلبته:"
+        unpaid_order: "لم يتم سداد طلبك ، لذا لم يتم رد الأموال"
+        paid_order: "تم دفع طلبك حتى أعاد %{distributor} المبلغ بالكامل"
+        credit_order: "تم دفع طلبك حتى تم إضافة رصيد إلى حسابك"
+        subject: "إلغاء الطلب"
+      cancel_email_for_shop:
+        greeting: "عزيزي %{name} ،"
         subject: "إلغاء الطلب"
       confirm_email:
         subject: "تأكيد الطلب"
       invoice_email:
         hi: "مرحبًا %{name}"
         invoice_attached_text: يرجى الاطلاع على فاتورة مرفقة لطلبك الأخير من
+    user_mailer:
+      reset_password_instructions:
+        request_sent_text: |
+            تم تقديم طلب لإعادة تعيين كلمة المرور الخاصة بك.
+            إذا لم تقدم هذا الطلب ، ببساطة تجاهل هذا البريد الإلكتروني.
+        link_text: >
+            إذا قمت بهذا الطلب ، فما عليك سوى النقر فوق الرابط أدناه:
+        issue_text: |
+            إذا لم يعمل عنوان URL أعلاه ، فحاول نسخه ولصقه في متصفحك.
+            إذا كنت لا تزال تواجه مشاكل ، فلا تتردد في الاتصال بنا.
+        subject: "تعليمات إعادة تعيين كلمة المرور"
+      confirmation_instructions:
+        subject: "يرجى تأكيد حسابك OFN"
+    payment_mailer:
+      authorize_payment:
+        subject: "يرجى تفويض الدفع الخاص بك إلى %{distributor} على OFN"
+        instructions: "يتطلب الدفع الخاص بك من %{amount} إلى %{distributor} مصادقة إضافية. الرجاء زيارة URL التالي لتفويض الدفع الخاص بك:"
+    shipment_mailer:
+      shipped_email:
+        dear_customer: "عزيزي العميل،"
+        instructions: "تم شحن طلبك"
+        shipment_summary: "ملخص الشحن"
+        subject: "إشعار الشحن"
+        thanks: "شكرا لك على اعمالك."
+        track_information: "معلومات التتبع : %{tracking}"
+        track_link: "رابط التتبع: %{url}"
+    test_mailer:
+      test_email:
+        greeting: "تهانينا!"
+        message: "إذا كنت قد تلقيت هذا البريد الإلكتروني ، فإن إعدادات بريدك الإلكتروني صحيحة."
+        subject: "اختبار البريد"
     order_state:
       address: العنوان
       adjustments: التعديلات
@@ -3230,18 +3606,24 @@ ar:
       ended: انتهى
       paused: التعليق
       canceled: الالغاء
-    user_mailer:
-      reset_password_instructions:
-        request_sent_text: |
-            تم تقديم طلب لإعادة تعيين كلمة المرور الخاصة بك.
-            إذا لم تقدم هذا الطلب ، ببساطة تجاهل هذا البريد الإلكتروني.
-        link_text: >
-            إذا قمت بهذا الطلب ، فما عليك سوى النقر فوق الرابط أدناه:
-        issue_text: |
-            إذا لم يعمل عنوان URL أعلاه ، فحاول نسخه ولصقه في متصفحك.
-            إذا كنت لا تزال تواجه مشاكل ، فلا تتردد في الاتصال بنا.
-      confirmation_instructions:
-        subject: يرجى تأكيد حسابك OFN
+    paypal:
+      already_refunded: "تم رد هذه الدفعة ولا يمكن اتخاذ أي إجراء آخر بشأنها."
+      no_payment_via_admin_backend: "لا يمكنك شحن حسابات PayPal من خلال المسؤول  للواجهة الخلفية في الوقت الحالي."
+      transaction: "معاملة PayPal"
+      payer_id: "معرف الدافع"
+      transaction_id: "رقم المعاملة"
+      token: "رمز"
+      refund: "إعادة المال"
+      refund_amount: "القيمة"
+      original_amount: "المبلغ الأصلي: %{amount}"
+      refund_successful: "تم استرداد المال عبر  PayPal بنجاح"
+      refund_unsuccessful: "استرداد المال عبر  PayPal غير ناجح"
+      actions:
+        refund: "إعادة المال"
+      flash:
+        cancel: "لا تريد استخدام PayPal؟ لا يوجد مشكلة."
+        connection_failed: "تعذر الاتصال بـ PayPal."
+        generic_error: "فشل PayPal. %{reasons}"
     users:
       form:
         account_settings: إعدادت الحساب
@@ -3274,17 +3656,17 @@ ar:
         items: المواد
         total: المجموع
         paid?: دفع؟
-        view: العرض
+        view: عرض
       saved_cards:
         default?: الإفتراضي؟
         delete?: حذف؟
       cards:
         authorised_shops: المتاجر المعتمدة
-        authorised_shops_popover: هذه هي قائمة المتاجر التي يُسمح لها باستحقاق الدفع عن طريق بطاقتك الائتمانية الافتراضية عن أي اشتراكات (على سبيل المثال ، الطلبات المتكررة) التي قد قمت بعملها. سيتم الاحتفاظ بتفاصيل بطاقتك بأمان ولن تتم مشاركتها مع أصحاب المتاجر. سيتم إخطارك دائمًا عند تحصيل الرسوم منك.
+        authorised_shops_agreement: هذه قائمة بالمحلات التجارية المسموح لها بشحن بطاقة الائتمان الافتراضية الخاصة بك مقابل أي اشتراكات (مثل تكرار الطلبات) قد تكون لديك. سيتم الاحتفاظ بتفاصيل بطاقتك بشكل آمن ولن يتم مشاركتها مع أصحاب المتاجر. سيتم إخطارك دائمًا عند محاسبتك. من خلال تحديد المربع الخاص بمتجر ، فإنك توافق على تخويل هذا المتجر بإرسال تعليمات إلى المؤسسة المالية التي أصدرت بطاقتك لتلقي المدفوعات وفقًا لشروط أي اشتراك تقوم بإنشائه مع هذا المتجر.
         saved_cards_popover: هذه قائمة البطاقات التي اخترت حفظها لاستخدامها لاحقًا. سيتم تحديد &quot;الافتراضي&quot; الخاص بك تلقائيًا عند إتمام طلب الشراء ، ويمكن أن يتم تحصيل رسوم من أي متاجر سمحت لها بالقيام بذلك (انظر إلى اليمين).
       authorised_shops:
         shop_name: "اسم المتجر"
-        allow_charges?: "السماح للرسوم؟"
+        allow_charges?: "السماح بالسحب من البطاقة الافتراضية؟"
     localized_number:
       invalid_format: لديه تنسيق غير صالح. الرجاء إدخال رقم.
     api:
@@ -3303,3 +3685,12 @@ ar:
       shipment:
         cannot_ready: "لا يمكن تجهيز الشحنة"
       invalid_taxonomy_id: "معرف التصنيف غير صالح."
+    activerecord:
+      models:
+        spree/payment:
+          zero: المدفوعات
+          one: دفع
+          two: المدفوعات
+          few: المدفوعات
+          many: المدفوعات
+          other: الدفعات

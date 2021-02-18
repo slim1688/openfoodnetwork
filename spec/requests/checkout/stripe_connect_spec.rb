@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe "checking out an order with a Stripe Connect payment method", type: :request do
   include ShopWorkflow
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include OpenFoodNetwork::ApiHelper
 
   let!(:order_cycle) { create(:simple_order_cycle) }
@@ -10,11 +12,11 @@ describe "checking out an order with a Stripe Connect payment method", type: :re
   let!(:shipping_method) do
     create(
       :shipping_method,
-      calculator: Spree::Calculator::FlatRate.new(preferred_amount: 0),
+      calculator: Calculator::FlatRate.new(preferred_amount: 0),
       distributors: [enterprise]
     )
   end
-  let!(:payment_method) { create(:stripe_payment_method, distributors: [enterprise]) }
+  let!(:payment_method) { create(:stripe_connect_payment_method, distributors: [enterprise]) }
   let!(:stripe_account) { create(:stripe_account, enterprise: enterprise) }
   let!(:line_item) { create(:line_item, price: 12.34) }
   let!(:order) { line_item.order }
@@ -67,7 +69,7 @@ describe "checking out an order with a Stripe Connect payment method", type: :re
     allow(order_cycle_distributed_variants).to receive(:distributes_order_variants?) { true }
 
     allow(Stripe).to receive(:api_key) { "sk_test_12345" }
-    order.update_attributes(distributor_id: enterprise.id, order_cycle_id: order_cycle.id)
+    order.update(distributor_id: enterprise.id, order_cycle_id: order_cycle.id)
     order.reload.update_totals
     set_order order
   end
@@ -102,7 +104,7 @@ describe "checking out an order with a Stripe Connect payment method", type: :re
         it "should process the payment without storing card details" do
           put update_checkout_path, params
 
-          expect(json_response["path"]).to eq spree.order_path(order)
+          expect(json_response["path"]).to eq order_path(order)
           expect(order.payments.completed.count).to be 1
 
           card = order.payments.completed.first.source
@@ -159,7 +161,7 @@ describe "checking out an order with a Stripe Connect payment method", type: :re
         it "should process the payment, and stores the card/customer details" do
           put update_checkout_path, params
 
-          expect(json_response["path"]).to eq spree.order_path(order)
+          expect(json_response["path"]).to eq order_path(order)
           expect(order.payments.completed.count).to be 1
 
           card = order.payments.completed.first.source
@@ -244,7 +246,7 @@ describe "checking out an order with a Stripe Connect payment method", type: :re
 
     before do
       params[:order][:existing_card_id] = credit_card.id
-      quick_login_as(order.user)
+      login_as(order.user)
 
       # Requests a token
       stub_request(:post, "https://api.stripe.com/v1/tokens")
@@ -261,7 +263,7 @@ describe "checking out an order with a Stripe Connect payment method", type: :re
       it "should process the payment, and keep the profile ids and other card details" do
         put update_checkout_path, params
 
-        expect(json_response["path"]).to eq spree.order_path(order)
+        expect(json_response["path"]).to eq order_path(order)
         expect(order.payments.completed.count).to be 1
 
         card = order.payments.completed.first.source

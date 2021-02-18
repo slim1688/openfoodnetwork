@@ -8,13 +8,14 @@ module Checkout
     end
 
     def success(controller, params, current_user)
+      set_customer_terms_and_conditions_accepted_at(params)
       save_order_addresses_as_user_default(params, current_user)
-      ResetOrderService.new(controller, @order).call
+      OrderCompletionReset.new(controller, @order).call
     end
 
     def failure
       @order.updater.shipping_address_from_distributor
-      RestartCheckout.new(@order).call
+      OrderCheckoutRestart.new(@order).call
     end
 
     private
@@ -25,6 +26,12 @@ module Checkout
       user_default_address_setter = UserDefaultAddressSetter.new(@order, current_user)
       user_default_address_setter.set_default_bill_address if params[:order][:default_bill_address]
       user_default_address_setter.set_default_ship_address if params[:order][:default_ship_address]
+    end
+
+    def set_customer_terms_and_conditions_accepted_at(params)
+      return unless params[:order]
+
+      @order.customer.update(terms_and_conditions_accepted_at: Time.zone.now) if params[:order][:terms_and_conditions_accepted]
     end
   end
 end

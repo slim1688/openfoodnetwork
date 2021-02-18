@@ -10,13 +10,14 @@ class OrderCycle < ActiveRecord::Base
 
   # These scope names are prepended with "cached_" because there are existing accessor methods
   # :incoming_exchanges and :outgoing_exchanges.
-  has_many :cached_incoming_exchanges, conditions: { incoming: true }, class_name: "Exchange"
-  has_many :cached_outgoing_exchanges, conditions: { incoming: false }, class_name: "Exchange"
+  has_many :cached_incoming_exchanges, -> { where incoming: true }, class_name: "Exchange"
+  has_many :cached_outgoing_exchanges, -> { where incoming: false }, class_name: "Exchange"
 
-  has_many :suppliers, source: :sender, through: :cached_incoming_exchanges, uniq: true
-  has_many :distributors, source: :receiver, through: :cached_outgoing_exchanges, uniq: true
+  has_many :suppliers, -> { uniq }, source: :sender, through: :cached_incoming_exchanges
+  has_many :distributors, -> { uniq }, source: :receiver, through: :cached_outgoing_exchanges
 
-  has_and_belongs_to_many :schedules, join_table: 'order_cycle_schedules'
+  has_many :schedules, through: :order_cycle_schedules
+  has_many :order_cycle_schedules
   has_paper_trail meta: { custom_data: proc { |order_cycle| order_cycle.schedule_ids.to_s } }
 
   attr_accessor :incoming_exchanges, :outgoing_exchanges
@@ -62,16 +63,16 @@ class OrderCycle < ActiveRecord::Base
 
   scope :managed_by, lambda { |user|
     if user.has_spree_role?('admin')
-      scoped
+      where(nil)
     else
-      where(coordinator_id: user.enterprises)
+      where(coordinator_id: user.enterprises.to_a)
     end
   }
 
   # Return order cycles that user coordinates, sends to or receives from
-  scope :accessible_by, lambda { |user|
+  scope :visible_by, lambda { |user|
     if user.has_spree_role?('admin')
-      scoped
+      where(nil)
     else
       with_exchanging_enterprises_outer.
         where('order_cycles.coordinator_id IN (?) OR enterprises.id IN (?)',
@@ -240,7 +241,8 @@ class OrderCycle < ActiveRecord::Base
   end
 
   def exchanges_supplying(order)
-    exchanges.supplying_to(order.distributor).with_any_variant(order.variants.map(&:id))
+    variant_ids_relation = Spree::LineItem.in_orders(order).select(:variant_id)
+    exchanges.supplying_to(order.distributor).with_any_variant(variant_ids_relation)
   end
 
   def coordinated_by?(user)

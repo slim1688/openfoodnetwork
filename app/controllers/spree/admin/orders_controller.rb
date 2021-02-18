@@ -3,39 +3,38 @@ require 'open_food_network/spree_api_key_loader'
 module Spree
   module Admin
     class OrdersController < Spree::Admin::BaseController
-      require 'spree/core/gateway_error'
       include OpenFoodNetwork::SpreeApiKeyLoader
       helper CheckoutHelper
 
-      before_filter :load_order, only: [:edit, :update, :fire, :resend,
+      before_action :load_order, only: [:edit, :update, :fire, :resend,
                                         :invoice, :print, :print_ticket]
-      before_filter :load_distribution_choices, only: [:new, :edit, :update]
+      before_action :load_distribution_choices, only: [:new, :edit, :update]
 
       # Ensure that the distributor is set for an order when
-      before_filter :ensure_distribution, only: :new
+      before_action :ensure_distribution, only: :new
 
       # After updating an order, the fees should be updated as well
       # Currently, adding or deleting line items does not trigger updating the
       # fees! This is a quick fix for that.
       # TODO: update fees when adding/removing line items
       # instead of the update_distribution_charge method.
-      after_filter :update_distribution_charge, only: :update
+      after_action :update_distribution_charge, only: :update
 
-      before_filter :require_distributor_abn, only: :invoice
+      before_action :require_distributor_abn, only: :invoice
 
       respond_to :html, :json
 
       def new
         @order = Order.create
-        @order.created_by = try_spree_current_user
+        @order.created_by = spree_current_user
         @order.save
-        redirect_to edit_admin_order_url(@order)
+        redirect_to spree.edit_admin_order_url(@order)
       end
 
       def edit
         @order.shipments.map(&:refresh_rates)
 
-        AdvanceOrderService.new(@order).call
+        OrderWorkflow.new(@order).complete
 
         # The payment step shows an error of 'No pending payments'
         # Clearing the errors from the order object will stop this error
@@ -44,20 +43,20 @@ module Spree
       end
 
       def update
-        unless @order.update_attributes(params[:order]) && @order.line_items.present?
+        unless order_params.present? && @order.update(order_params) && @order.line_items.present?
           if @order.line_items.empty?
             @order.errors.add(:line_items, Spree.t('errors.messages.blank'))
           end
-          return redirect_to(edit_admin_order_path(@order),
+          return redirect_to(spree.edit_admin_order_path(@order),
                              flash: { error: @order.errors.full_messages.join(', ') })
         end
 
         @order.update!
         if @order.complete?
-          redirect_to edit_admin_order_path(@order)
+          redirect_to spree.edit_admin_order_path(@order)
         else
           # Jump to next step if order is not complete
-          redirect_to admin_order_customer_path(@order)
+          redirect_to spree.admin_order_customer_path(@order)
         end
       end
 
@@ -79,8 +78,8 @@ module Spree
       end
 
       def resend
-        Spree::OrderMailer.confirm_email_for_customer(@order.id, true).deliver
-        flash[:success] = t(:order_email_resent)
+        Spree::OrderMailer.confirm_email_for_customer(@order.id, true).deliver_later
+        flash[:success] = t('admin.orders.order_email_resent')
 
         respond_with(@order) { |format| format.html { redirect_to :back } }
       end
@@ -88,10 +87,12 @@ module Spree
       def invoice
         pdf = InvoiceRenderer.new.render_to_string(@order)
 
-        Spree::OrderMailer.invoice_email(@order.id, pdf).deliver
+        Spree::OrderMailer.invoice_email(@order.id, pdf).deliver_later
         flash[:success] = t('admin.orders.invoice_email_sent')
 
-        respond_with(@order) { |format| format.html { redirect_to edit_admin_order_path(@order) } }
+        respond_with(@order) { |format|
+          format.html { redirect_to spree.edit_admin_order_path(@order) }
+        }
       end
 
       def print
@@ -108,10 +109,16 @@ module Spree
 
       private
 
+      def order_params
+        return params[:order] if params[:order].blank?
+
+        params.require(:order).permit(:distributor_id, :order_cycle_id)
+      end
+
       def load_order
         if params[:id]
           @order = Order.includes(:adjustments, :shipments, line_items: :adjustments).
-            find_by_number!(params[:id])
+            find_by!(number: params[:id])
         end
         authorize! action, @order
       end
@@ -125,7 +132,9 @@ module Spree
 
         flash[:error] = t(:must_have_valid_business_number,
                           enterprise_name: @order.distributor.name)
-        respond_with(@order) { |format| format.html { redirect_to edit_admin_order_path(@order) } }
+        respond_with(@order) { |format|
+          format.html { redirect_to spree.edit_admin_order_path(@order) }
+        }
       end
 
       def load_distribution_choices

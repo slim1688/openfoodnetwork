@@ -1,9 +1,10 @@
 require 'open_food_network/permissions'
+require 'spree/core/product_duplicator'
 
 module Api
   class ProductsController < Api::BaseController
+    include PaginationData
     respond_to :json
-    DEFAULT_PAGE = 1
     DEFAULT_PER_PAGE = 15
 
     skip_authorization_check only: [:show, :bulk_products, :overridable]
@@ -16,7 +17,7 @@ module Api
     def create
       authorize! :create, Spree::Product
       params[:product][:available_on] ||= Time.zone.now
-      @product = Spree::Product.new(params[:product])
+      @product = Spree::Product.new(product_params)
       begin
         if @product.save
           render json: @product, serializer: Api::Admin::ProductSerializer, status: :created
@@ -32,7 +33,7 @@ module Api
     def update
       authorize! :update, Spree::Product
       @product = find_product(params[:id])
-      if @product.update_attributes(params[:product])
+      if @product.update(product_params)
         render json: @product, serializer: Api::Admin::ProductSerializer, status: :ok
       else
         invalid_resource!(@product)
@@ -62,7 +63,7 @@ module Api
       @products = product_query.
         ransack(query_params_with_defaults).
         result.
-        page(params[:page] || DEFAULT_PAGE).
+        page(params[:page] || 1).
         per(params[:per_page] || DEFAULT_PER_PAGE)
 
       render_paged_products @products
@@ -92,7 +93,7 @@ module Api
     private
 
     def find_product(id)
-      product_scope.find_by_permalink!(id.to_s)
+      product_scope.find_by!(permalink: id.to_s)
     rescue ActiveRecord::RecordNotFound
       product_scope.find(id)
     end
@@ -119,7 +120,7 @@ module Api
     end
 
     def paged_products_for_producers(producer_ids)
-      Spree::Product.scoped.
+      Spree::Product.where(nil).
         merge(product_scope).
         includes(variants: [:product, :default_price, :stock_items]).
         where(supplier_id: producer_ids).
@@ -129,31 +130,23 @@ module Api
     end
 
     def render_paged_products(products, product_serializer = ::Api::Admin::ProductSerializer)
-      serializer = ActiveModel::ArraySerializer.new(
+      serialized_products = ActiveModel::ArraySerializer.new(
         products,
         each_serializer: product_serializer
       )
 
-      render text: {
-        products: serializer,
-        # This line is used by the PagedFetcher JS service (inventory).
-        pages: products.num_pages,
-        # This hash is used by the BulkProducts JS service.
+      render json: {
+        products: serialized_products,
         pagination: pagination_data(products)
-      }.to_json
+      }
     end
 
     def query_params_with_defaults
-      params[:q].to_h.reverse_merge(s: 'created_at desc')
+      (params[:q] || {}).reverse_merge(s: 'created_at desc')
     end
 
-    def pagination_data(results)
-      {
-        results: results.total_count,
-        pages: results.num_pages,
-        page: (params[:page] || DEFAULT_PAGE).to_i,
-        per_page: (params[:per_page] || DEFAULT_PER_PAGE).to_i
-      }
+    def product_params
+      params.require(:product).permit PermittedAttributes::Product.attributes
     end
   end
 end

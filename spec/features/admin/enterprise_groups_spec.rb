@@ -1,11 +1,13 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature '
     As an administrator
     I want to manage enterprise groups
 ' do
-  include AuthenticationWorkflow
   include WebHelper
+  include AuthenticationHelper
 
   before(:each) do
     login_to_admin_section
@@ -33,8 +35,8 @@ feature '
     fill_in 'enterprise_group_name', with: 'EGEGEG'
     fill_in 'enterprise_group_description', with: 'This is a description'
     check 'enterprise_group_on_front_page'
-    select2_search e1.name, from: 'Enterprises'
-    select2_search e2.name, from: 'Enterprises'
+    select2_select e1.name, from: 'enterprise_group_enterprise_ids', search: true
+    select2_select e2.name, from: 'enterprise_group_enterprise_ids', search: true
     click_link 'Contact'
     fill_in 'enterprise_group_address_attributes_phone', with: '000'
     fill_in 'enterprise_group_address_attributes_address1', with: 'My Street'
@@ -107,12 +109,12 @@ feature '
   end
 
   context "as an enterprise user" do
-    let(:user) { create_enterprise_user }
+    let(:user) { create(:user) }
     let!(:enterprise) { create(:distributor_enterprise, owner: user) }
     let!(:group) { create(:enterprise_group, name: 'My Group', owner: user) }
 
     it "lets me access enterprise groups" do
-      quick_login_as user
+      login_as user
       visit spree.admin_dashboard_path
       click_link 'Groups'
       expect(page).to have_content 'My Group'

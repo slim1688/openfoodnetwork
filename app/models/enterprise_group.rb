@@ -1,5 +1,8 @@
+# frozen_string_literal: true
+
 require 'open_food_network/locking'
 require 'open_food_network/permalink_generator'
+require 'spree/core/s3_support'
 
 class EnterpriseGroup < ActiveRecord::Base
   include PermalinkGenerator
@@ -20,13 +23,6 @@ class EnterpriseGroup < ActiveRecord::Base
 
   before_validation :sanitize_permalink
   validates :permalink, uniqueness: true, presence: true
-
-  attr_accessible :name, :description, :long_description, :on_front_page, :enterprise_ids
-  attr_accessible :owner_id
-  attr_accessible :permalink
-  attr_accessible :logo, :promo_image
-  attr_accessible :address_attributes
-  attr_accessible :email, :website, :facebook, :instagram, :linkedin, :twitter
 
   delegate :phone, :address1, :address2, :city, :zipcode, :state, :country, to: :address
 
@@ -51,7 +47,7 @@ class EnterpriseGroup < ActiveRecord::Base
   scope :on_front_page, -> { where(on_front_page: true) }
   scope :managed_by, lambda { |user|
     if user.has_spree_role?('admin')
-      scoped
+      where(nil)
     else
       where('owner_id = ?', user.id)
     end
@@ -72,10 +68,10 @@ class EnterpriseGroup < ActiveRecord::Base
   def unset_undefined_address_fields
     return if address.blank?
 
-    address.phone.sub!(/^#{I18n.t(:undefined)}$/, '')
-    address.address1.sub!(/^#{I18n.t(:undefined)}$/, '')
-    address.city.sub!(/^#{I18n.t(:undefined)}$/, '')
-    address.zipcode.sub!(/^#{I18n.t(:undefined)}$/, '')
+    address.phone = address.phone.sub(/^#{I18n.t(:undefined)}$/, '')
+    address.address1 = address.address1.sub(/^#{I18n.t(:undefined)}$/, '')
+    address.city = address.city.sub(/^#{I18n.t(:undefined)}$/, '')
+    address.zipcode = address.zipcode.sub(/^#{I18n.t(:undefined)}$/, '')
   end
 
   def to_param

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class EnterpriseRelationship < ActiveRecord::Base
   belongs_to :parent, class_name: 'Enterprise', touch: true
   belongs_to :child, class_name: 'Enterprise', touch: true
@@ -74,7 +76,7 @@ class EnterpriseRelationship < ActiveRecord::Base
       permissions.destroy_all
     else
       permissions.where('name NOT IN (?)', perms).destroy_all
-      perms.map { |name| permissions.find_or_initialize_by_name name }
+      perms.map { |name| permissions.find_or_initialize_by name: name }
     end
   end
 

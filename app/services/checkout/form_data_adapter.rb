@@ -3,7 +3,7 @@
 # Adapts checkout form data (params) so that the order can be directly saved to the database
 module Checkout
   class FormDataAdapter
-    attr_reader :shipping_method_id
+    attr_reader :params, :shipping_method_id
 
     def initialize(params, order, current_user)
       @params = params.dup
@@ -12,15 +12,13 @@ module Checkout
 
       move_payment_source_to_payment_attributes!
 
+      fill_in_card_type
+
       set_amount_in_payments_attributes
 
       construct_saved_card_attributes if @params[:order][:existing_card_id]
 
       @shipping_method_id = @params[:order].delete(:shipping_method_id)
-    end
-
-    def order_params
-      @params[:order]
     end
 
     private
@@ -33,6 +31,25 @@ module Checkout
                     payment_source_params = delete_payment_source_params!
 
       @params[:order][:payments_attributes].first[:source_attributes] = payment_source_params
+    end
+
+    # Ensures cc_type is always passed to the model by inferring the type when
+    # the frontend didn't provide it.
+    def fill_in_card_type
+      return unless payment_source_attributes
+
+      return if payment_source_attributes.dig(:number).blank?
+
+      payment_source_attributes[:cc_type] ||= card_brand(payment_source_attributes[:number])
+    end
+
+    def payment_source_attributes
+      @payment_source_attributes ||=
+        params[:order][:payments_attributes]&.first&.dig(:source_attributes)
+    end
+
+    def card_brand(number)
+      ActiveMerchant::Billing::CreditCard.brand?(number)
     end
 
     def delete_payment_source_params!

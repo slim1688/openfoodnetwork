@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'spec_helper'
+
 module OrderManagement
   module Subscriptions
     describe Estimator do
@@ -11,12 +13,12 @@ module OrderManagement
         let(:estimator) { Estimator.new(subscription) }
 
         before do
-          sli1.update_attributes(price_estimate: 4.0)
-          sli2.update_attributes(price_estimate: 5.0)
-          sli3.update_attributes(price_estimate: 6.0)
-          sli1.variant.update_attributes(price: 1.0)
-          sli2.variant.update_attributes(price: 2.0)
-          sli3.variant.update_attributes(price: 3.0)
+          sli1.update(price_estimate: 4.0)
+          sli2.update(price_estimate: 5.0)
+          sli3.update(price_estimate: 6.0)
+          sli1.variant.update(price: 1.0)
+          sli2.variant.update(price: 2.0)
+          sli3.variant.update(price: 3.0)
 
           # Simulating assignment of attrs from params
           sli1.assign_attributes(price_estimate: 7.0)
@@ -89,19 +91,19 @@ module OrderManagement
 
         before do
           allow(estimator).to receive(:assign_price_estimates)
-          sli1.update_attributes(price_estimate: 4.0)
-          sli2.update_attributes(price_estimate: 5.0)
-          sli3.update_attributes(price_estimate: 6.0)
+          sli1.update(price_estimate: 4.0)
+          sli2.update(price_estimate: 5.0)
+          sli3.update(price_estimate: 6.0)
         end
 
         context "using flat rate calculators" do
           let(:shipping_method) {
             create(:shipping_method,
-                   calculator: Spree::Calculator::FlatRate.new(preferred_amount: 12.34))
+                   calculator: Calculator::FlatRate.new(preferred_amount: 12.34))
           }
           let(:payment_method) {
             create(:payment_method,
-                   calculator: Spree::Calculator::FlatRate.new(preferred_amount: 9.12))
+                   calculator: Calculator::FlatRate.new(preferred_amount: 9.12))
           }
 
           it "calculates fees based on the rates provided" do
@@ -114,13 +116,13 @@ module OrderManagement
         context "using flat percent item total calculators" do
           let(:shipping_method) {
             create(:shipping_method,
-                   calculator: Spree::Calculator::FlatPercentItemTotal.new(
+                   calculator: Calculator::FlatPercentItemTotal.new(
                      preferred_flat_percent: 10
                    ))
           }
           let(:payment_method) {
             create(:payment_method,
-                   calculator: Spree::Calculator::FlatPercentItemTotal.new(
+                   calculator: Calculator::FlatPercentItemTotal.new(
                      preferred_flat_percent: 20
                    ))
           }
@@ -152,11 +154,11 @@ module OrderManagement
         context "using per item calculators" do
           let(:shipping_method) {
             create(:shipping_method,
-                   calculator: Spree::Calculator::PerItem.new(preferred_amount: 1.2))
+                   calculator: Calculator::PerItem.new(preferred_amount: 1.2))
           }
           let(:payment_method) {
             create(:payment_method,
-                   calculator: Spree::Calculator::PerItem.new(preferred_amount: 0.3))
+                   calculator: Calculator::PerItem.new(preferred_amount: 0.3))
           }
 
           it "calculates fees based on the number of items and rate provided" do

@@ -1,20 +1,21 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature 'Enterprises Index' do
-  include AuthenticationWorkflow
   include WebHelper
+  include AuthenticationHelper
 
   context "as an admin user" do
     scenario "listing enterprises" do
       s = create(:supplier_enterprise)
       d = create(:distributor_enterprise)
 
-      login_to_admin_section
-      click_link 'Enterprises'
+      login_as_admin_and_visit admin_enterprises_path
 
       within("tr.enterprise-#{s.id}") do
         expect(page).to have_content s.name
-        expect(page).to have_select "enterprise_set_collection_attributes_1_sells"
+        expect(page).to have_select "sets_enterprise_set_collection_attributes_1_sells"
         expect(page).to have_content "Settings"
         expect(page).to have_content "Delete"
         expect(page).to have_no_content "Payment Methods"
@@ -24,7 +25,7 @@ feature 'Enterprises Index' do
 
       within("tr.enterprise-#{d.id}") do
         expect(page).to have_content d.name
-        expect(page).to have_select "enterprise_set_collection_attributes_0_sells"
+        expect(page).to have_select "sets_enterprise_set_collection_attributes_0_sells"
         expect(page).to have_content "Settings"
         expect(page).to have_content "Delete"
         expect(page).to have_content "Payment Methods"
@@ -36,7 +37,7 @@ feature 'Enterprises Index' do
     context "editing enterprises in bulk" do
       let!(:s){ create(:supplier_enterprise) }
       let!(:d){ create(:distributor_enterprise, sells: 'none') }
-      let!(:d_manager) { create_enterprise_user(enterprise_limit: 1) }
+      let!(:d_manager) { create(:user, enterprise_limit: 1) }
 
       before do
         d_manager.enterprise_roles.build(enterprise: d).save
@@ -45,16 +46,15 @@ feature 'Enterprises Index' do
 
       context "without violating rules" do
         before do
-          quick_login_as_admin
-          visit admin_enterprises_path
+          login_as_admin_and_visit admin_enterprises_path
         end
 
         it "updates the enterprises" do
           within("tr.enterprise-#{d.id}") do
-            expect(page).to have_checked_field "enterprise_set_collection_attributes_0_visible"
-            uncheck "enterprise_set_collection_attributes_0_visible"
-            select 'any', from: "enterprise_set_collection_attributes_0_sells"
-            select d_manager.email, from: 'enterprise_set_collection_attributes_0_owner_id'
+            expect(page).to have_checked_field "sets_enterprise_set_collection_attributes_0_visible"
+            uncheck "sets_enterprise_set_collection_attributes_0_visible"
+            select 'any', from: "sets_enterprise_set_collection_attributes_0_sells"
+            select d_manager.email, from: 'sets_enterprise_set_collection_attributes_0_owner_id'
           end
           click_button "Update"
           expect(flash_message).to eq('Enterprises updated successfully')
@@ -72,8 +72,7 @@ feature 'Enterprises Index' do
           d_manager.enterprise_roles.build(enterprise: second_distributor).save
           expect(d.owner).to_not eq d_manager
 
-          quick_login_as_admin
-          visit admin_enterprises_path
+          login_as_admin_and_visit admin_enterprises_path
         end
 
         def enterprise_row_index(enterprise_name)
@@ -84,12 +83,12 @@ feature 'Enterprises Index' do
         it "does not update the enterprises and displays errors" do
           d_row_index = enterprise_row_index(d.name)
           within("tr.enterprise-#{d.id}") do
-            select d_manager.email, from: "enterprise_set_collection_attributes_#{d_row_index}_owner_id"
+            select d_manager.email, from: "sets_enterprise_set_collection_attributes_#{d_row_index}_owner_id"
           end
 
           second_distributor_row_index = enterprise_row_index(second_distributor.name)
           within("tr.enterprise-#{second_distributor.id}") do
-            select d_manager.email, from: "enterprise_set_collection_attributes_#{second_distributor_row_index}_owner_id"
+            select d_manager.email, from: "sets_enterprise_set_collection_attributes_#{second_distributor_row_index}_owner_id"
           end
           click_button "Update"
           expect(flash_message).to eq('Update failed')
@@ -107,14 +106,14 @@ feature 'Enterprises Index' do
     let(:distributor1) { create(:distributor_enterprise, name: 'First Distributor') }
     let(:distributor2) { create(:distributor_enterprise, name: 'Another Distributor') }
     let(:distributor3) { create(:distributor_enterprise, name: 'Yet Another Distributor') }
-    let(:enterprise_manager) { create_enterprise_user }
+    let(:enterprise_manager) { create(:user) }
     let!(:er) { create(:enterprise_relationship, parent: distributor3, child: distributor1, permissions_list: [:edit_profile]) }
 
     before(:each) do
       enterprise_manager.enterprise_roles.build(enterprise: supplier1).save
       enterprise_manager.enterprise_roles.build(enterprise: distributor1).save
 
-      quick_login_as enterprise_manager
+      login_as enterprise_manager
     end
 
     context "listing enterprises", js: true do
@@ -142,7 +141,7 @@ feature 'Enterprises Index' do
         expect(page).to have_no_content "supplier2.name"
         expect(page).to have_no_content "distributor2.name"
 
-        expect(find("#content-header")).to have_link "New Enterprise"
+        expect(find('.js-admin-section-header')).to have_link "New Enterprise"
       end
 
       it "does not give me an option to change or update the package and producer properties of enterprises I manage" do
@@ -165,11 +164,11 @@ feature 'Enterprises Index' do
   end
 
   describe "as the owner of an enterprise" do
-    let!(:user) { create_enterprise_user }
+    let!(:user) { create(:user) }
     let!(:owned_distributor) { create(:distributor_enterprise, name: 'Owned Distributor', owner: user) }
 
     before do
-      quick_login_as user
+      login_as user
     end
 
     context "listing enterprises", js: true do

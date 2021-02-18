@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module OpenFoodNetwork
   module ApiHelper
     def json_response
@@ -13,7 +15,7 @@ module OpenFoodNetwork
     end
 
     def current_api_user
-      @current_api_user ||= Spree::LegacyUser.new(email: "spree@example.com", enterprises: [])
+      @current_api_user ||= Spree::LegacyUser.new(email: "ofn@example.com", enterprises: [])
     end
 
     def assert_unauthorized!

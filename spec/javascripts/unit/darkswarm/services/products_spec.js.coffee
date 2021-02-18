@@ -3,6 +3,7 @@ describe 'Products service', ->
   Products = null
   OrderCycle = {}
   Shopfront = null
+  RailsFlashLoader = null
   Variants = null
   Cart = null
   shopfront = null
@@ -11,8 +12,8 @@ describe 'Products service', ->
   productWithImage = null
   properties = null
   taxons = null
-  Geo = {}
-  endpoint = "/api/order_cycles/1/products?distributor=1"
+  GmapsGeo = {}
+  endpoint = "/api/order_cycles/1/products.json?distributor=1"
 
   beforeEach ->
     product =
@@ -43,6 +44,8 @@ describe 'Products service', ->
     OrderCycle =
       order_cycle:
         order_cycle_id: 1
+    RailsFlashLoader =
+      loadFlash: (arg) ->
 
     module 'Darkswarm'
     module ($provide)->
@@ -50,14 +53,16 @@ describe 'Products service', ->
       $provide.value "currentOrder", currentOrder
       $provide.value "taxons", taxons
       $provide.value "properties", properties
-      $provide.value "Geo", Geo
+      $provide.value "GmapsGeo", GmapsGeo
       $provide.value "OrderCycle", OrderCycle
+      $provide.value "railsFlash", null
       null
 
-    inject ($injector, _$httpBackend_)->
+    inject ($injector, _$httpBackend_, _RailsFlashLoader_)->
       Products = $injector.get("Products")
       Shopfront = $injector.get("Shopfront")
       Properties = $injector.get("Properties")
+      RailsFlashLoader = _RailsFlashLoader_
       Variants = $injector.get("Variants")
       Cart = $injector.get("Cart")
       $httpBackend = _$httpBackend_
@@ -102,7 +107,7 @@ describe 'Products service', ->
     $httpBackend.expectGET(endpoint).respond([product])
     $httpBackend.flush()
     expect(Products.products[0].primaryImage).toBeUndefined()
-    expect(Products.products[0].primaryImageOrMissing).toEqual "/assets/noimage/small.png"
+    expect(Products.products[0].primaryImageOrMissing).toEqual "/noimage/small.png"
 
   it "sets largeImage", ->
     $httpBackend.expectGET(endpoint).respond([productWithImage])

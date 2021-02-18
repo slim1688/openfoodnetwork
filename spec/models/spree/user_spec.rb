@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
-describe Spree.user_class do
+describe Spree::User do
   include OpenFoodNetwork::EmailHelper
 
   describe "associations" do
@@ -9,23 +11,25 @@ describe Spree.user_class do
     describe "addresses" do
       let(:user) { create(:user, bill_address: create(:address)) }
 
-      it 'updates billing address with new address' do
-        old_bill_address = user.bill_address
-        new_bill_address = create(:address, firstname: 'abc')
+      context "updating addresses via nested attributes" do
+        it 'updates billing address with new address' do
+          old_bill_address = user.bill_address
+          new_bill_address = create(:address, firstname: 'abc')
 
-        user.update_attributes(bill_address_attributes: new_bill_address.clone.attributes.merge('id' => old_bill_address.id))
+          user.update(bill_address_attributes: new_bill_address.dup.attributes.merge('id' => old_bill_address.id).except!('created_at', 'updated_at'))
 
-        expect(user.bill_address.id).to eq old_bill_address.id
-        expect(user.bill_address.firstname).to eq new_bill_address.firstname
-      end
+          expect(user.bill_address.id).to eq old_bill_address.id
+          expect(user.bill_address.firstname).to eq new_bill_address.firstname
+        end
 
-      it 'creates new shipping address' do
-        new_ship_address = create(:address, firstname: 'abc')
+        it 'creates new shipping address' do
+          new_ship_address = create(:address, firstname: 'abc')
 
-        user.update_attributes(ship_address_attributes: new_ship_address.clone.attributes)
+          user.update(ship_address_attributes: new_ship_address.dup.attributes.except!('created_at', 'updated_at'))
 
-        expect(user.ship_address.id).not_to eq new_ship_address.id
-        expect(user.ship_address.firstname).to eq new_ship_address.firstname
+          expect(user.ship_address.id).not_to eq new_ship_address.id
+          expect(user.ship_address.firstname).to eq new_ship_address.firstname
+        end
       end
     end
 
@@ -79,15 +83,14 @@ describe Spree.user_class do
       performing_deliveries do
         expect do
           create(:user, email: 'new_user@example.com', confirmation_sent_at: nil, confirmed_at: nil)
-        end.to send_confirmation_instructions
+        end.to enqueue_job ActionMailer::DeliveryJob
       end
 
-      sent_mail = ActionMailer::Base.deliveries.last
-      expect(sent_mail.to).to eq ['new_user@example.com']
+      expect(enqueued_jobs.last.to_s).to match "confirmation_instructions"
     end
 
     context "with the the same email as existing customers" do
-      let(:email) { Faker::Internet.email }
+      let(:email) { generate(:random_email) }
       let(:enterprise1) { create(:enterprise) }
       let(:enterprise2) { create(:enterprise) }
       let!(:customer1) { create(:customer, user: nil, email: email, enterprise: enterprise1) }
@@ -107,8 +110,10 @@ describe Spree.user_class do
       setup_email
 
       expect do
-        create(:user, confirmed_at: nil).confirm!
-      end.to enqueue_job ConfirmSignupJob
+        create(:user, confirmed_at: nil).confirm
+      end.to enqueue_job ActionMailer::DeliveryJob
+
+      expect(enqueued_jobs.last.to_s).to match "signup_confirmation"
     end
   end
 
@@ -165,36 +170,13 @@ describe Spree.user_class do
     end
   end
 
-  describe '#superadmin?' do
-    let(:user) { create(:user) }
-
-    context 'when the user has an admin spree role' do
-      before { user.spree_roles << Spree::Role.create(name: 'admin') }
-
-      it 'returns true' do
-        expect(user.superadmin?).to eq(true)
-      end
+  describe '#admin?' do
+    it 'returns true when the user has an admin spree role' do
+      expect(create(:admin_user).admin?).to be_truthy
     end
 
-    context 'when the user does not have an admin spree role' do
-      it 'returns false' do
-        expect(user.superadmin?).to eq(false)
-      end
-    end
-  end
-
-  before(:all) { Spree::Role.create name: 'admin' }
-
-  it '#admin?' do
-    expect(create(:admin_user).admin?).to be_truthy
-    expect(create(:user).admin?).to be_falsey
-  end
-
-  context '#create' do
-    let(:user) { build(:user) }
-
-    it 'should not be anonymous' do
-      expect(user).not_to be_anonymous
+    it 'returns false when the user does not have an admin spree role' do
+      expect(create(:user).admin?).to eq(false)
     end
   end
 
@@ -205,22 +187,6 @@ describe Spree.user_class do
       user = order.user
 
       expect { user.destroy }.to raise_exception(Spree::User::DestroyWithOrdersError)
-    end
-  end
-
-  context 'anonymous!' do
-    let(:user) { Spree::User.anonymous! }
-
-    it 'should create a new user' do
-      expect(user.new_record?).to be_falsey
-    end
-
-    it 'should create a user with an example.net email' do
-      expect(user.email).to match(/@example.net$/)
-    end
-
-    it 'should be anonymous' do
-      expect(user).to be_anonymous
     end
   end
 end

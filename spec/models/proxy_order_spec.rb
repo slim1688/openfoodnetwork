@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe ProxyOrder, type: :model do
@@ -12,7 +14,7 @@ describe ProxyOrder, type: :model do
 
     context "when the order cycle is not yet closed" do
       let(:proxy_order) { create(:proxy_order, subscription: subscription, order: order, order_cycle: order_cycle) }
-      before { order_cycle.update_attributes(orders_open_at: 1.day.ago, orders_close_at: 3.days.from_now) }
+      before { order_cycle.update(orders_open_at: 1.day.ago, orders_close_at: 3.days.from_now) }
 
       context "and an order has not been initialised" do
         let(:order) { nil }
@@ -28,7 +30,7 @@ describe ProxyOrder, type: :model do
         let(:order) { create(:completed_order_with_totals) }
 
         it "returns true and sets canceled_at to the current time, and cancels the order" do
-          expect(Spree::OrderMailer).to receive(:cancel_email) { double(:email, deliver: true) }
+          expect(Spree::OrderMailer).to receive(:cancel_email) { double(:email, deliver_later: true) }
           expect(proxy_order.cancel).to be true
           expect_cancelled_now proxy_order
           expect(order.reload.state).to eq 'canceled'
@@ -50,7 +52,7 @@ describe ProxyOrder, type: :model do
 
     context "when the order cycle is already closed" do
       let(:proxy_order) { create(:proxy_order, subscription: subscription, order: order, order_cycle: order_cycle) }
-      before { order_cycle.update_attributes(orders_open_at: 3.days.ago, orders_close_at: 1.minute.ago) }
+      before { order_cycle.update(orders_open_at: 3.days.ago, orders_close_at: 1.minute.ago) }
 
       context "and an order has not been initialised" do
         let(:order) { nil }
@@ -91,7 +93,7 @@ describe ProxyOrder, type: :model do
     end
 
     context "when the order cycle is not yet closed" do
-      before { order_cycle.update_attributes(orders_open_at: 1.day.ago, orders_close_at: 3.days.from_now) }
+      before { order_cycle.update(orders_open_at: 1.day.ago, orders_close_at: 3.days.from_now) }
 
       context "and the order has not been initialised" do
         let(:order) { nil }
@@ -105,7 +107,7 @@ describe ProxyOrder, type: :model do
 
       context "and the order has already been cancelled" do
         before do
-          allow(Spree::OrderMailer).to receive(:cancel_email) { double(:email, deliver: true) }
+          allow(Spree::OrderMailer).to receive(:cancel_email) { double(:email, deliver_later: true) }
           while !order.completed? do break unless order.next! end
           order.cancel
         end
@@ -131,7 +133,7 @@ describe ProxyOrder, type: :model do
     end
 
     context "when the order cycle is already closed" do
-      before { order_cycle.update_attributes(orders_open_at: 3.days.ago, orders_close_at: 1.minute.ago) }
+      before { order_cycle.update(orders_open_at: 3.days.ago, orders_close_at: 1.minute.ago) }
 
       context "and the order has not been initialised" do
         let(:order) { nil }
@@ -145,7 +147,7 @@ describe ProxyOrder, type: :model do
 
       context "and the order has been cancelled" do
         before do
-          allow(Spree::OrderMailer).to receive(:cancel_email) { double(:email, deliver: true) }
+          allow(Spree::OrderMailer).to receive(:cancel_email) { double(:email, deliver_later: true) }
           while !order.completed? do break unless order.next! end
           order.cancel
         end
@@ -188,7 +190,7 @@ describe ProxyOrder, type: :model do
       let(:existing_order) { create(:order) }
 
       before do
-        proxy_order.update_attributes(order: existing_order)
+        proxy_order.update(order: existing_order)
       end
 
       it "returns the existing order" do

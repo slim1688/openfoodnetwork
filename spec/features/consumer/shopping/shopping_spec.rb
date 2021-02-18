@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature "As a consumer I want to shop with a distributor", js: true do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include WebHelper
   include ShopWorkflow
   include UIComponentHelper
@@ -47,10 +49,24 @@ feature "As a consumer I want to shop with a distributor", js: true do
     describe "selecting an order cycle" do
       let(:exchange1) { oc1.exchanges.to_enterprises(distributor).outgoing.first }
 
-      it "selects an order cycle if only one is open" do
-        exchange1.update_attribute :pickup_time, "turtles"
-        visit shop_path
-        expect(page).to have_selector "option[selected]", text: 'turtles'
+      describe "with only one open order cycle" do
+        before { exchange1.update_attribute :pickup_time, "turtles" }
+
+        it "selects an order cycle" do
+          visit shop_path
+          expect(page).to have_selector "p", text: 'turtles'
+          expect(page).not_to have_content "choose when you want your order"
+          expect(page).to have_content "Next order closing in 2 days"
+        end
+
+        describe "when order cycle closes in more than 3 months" do
+          before { oc1.update orders_close_at: 5.months.from_now }
+
+          it "shows alternative to 'closing in' message" do
+            visit shop_path
+            expect(page).to have_content "Orders are currently open"
+          end
+        end
       end
 
       describe "with multiple order cycles" do
@@ -63,8 +79,10 @@ feature "As a consumer I want to shop with a distributor", js: true do
 
         it "shows a select with all order cycles, but doesn't show the products by default" do
           visit shop_path
+
           expect(page).to have_selector "option", text: 'frogs'
           expect(page).to have_selector "option", text: 'turtles'
+          expect(page).to have_content "choose when you want your order"
           expect(page).not_to have_selector("input.button.right", visible: true)
         end
 
@@ -101,9 +119,9 @@ feature "As a consumer I want to shop with a distributor", js: true do
             expect(page).to have_content with_currency(1020.99)
 
             # -- Cart shows correct price
-            fill_in "variants[#{variant.id}]", with: 1
-            show_cart
-            within("li.cart") { expect(page).to have_content with_currency(1020.99) }
+            click_add_to_cart variant
+            expect(page).to have_in_cart with_currency(1020.99)
+            toggle_cart
 
             # -- Changing order cycle
             accept_alert do
@@ -115,9 +133,8 @@ feature "As a consumer I want to shop with a distributor", js: true do
             # ng-animate means that the old product row is likely to be present, so we ensure
             # that we are not filling in the quantity on the outgoing row
             expect(page).not_to have_selector "tr.product-cart"
-            within('product:not(.ng-leave)') { fill_in "variants[#{variant.id}]", with: 1 }
-            show_cart
-            within("li.cart") { expect(page).to have_content with_currency(19.99) }
+            within('product:not(.ng-leave)') { click_add_to_cart variant }
+            expect(page).to have_in_cart with_currency(19.99)
           end
 
           describe "declining to clear the cart" do
@@ -127,46 +144,19 @@ feature "As a consumer I want to shop with a distributor", js: true do
 
               visit shop_path
               select "turtles", from: "order_cycle_id"
-              fill_in "variants[#{variant.id}]", with: 1
+              click_add_to_cart variant
             end
 
             it "leaves the cart untouched when the user declines" do
               handle_js_confirm(false) do
                 select "frogs", from: "order_cycle_id"
-                show_cart
+                expect(page).to have_in_cart "1"
                 expect(page).to have_selector "tr.product-cart"
-                expect(page).to have_selector 'li.cart', text: '1'
 
                 # The order cycle choice should not have changed
                 expect(page).to have_select 'order_cycle_id', selected: 'turtles'
               end
             end
-          end
-        end
-
-        context "when logged in" do
-          let!(:prev_order) { create(:completed_order_with_totals, order_cycle: oc1, distributor: distributor, user: order.user) }
-
-          before do
-            distributor.allow_order_changes = true
-            distributor.save
-            quick_login_as order.user
-            visit shop_path
-          end
-
-          it "shows previous orders if order cycle was selected already" do
-            select "frogs", from: "order_cycle_id"
-            expect(page).to have_content "Next order closing in 2 days"
-            visit shop_path
-            find("#cart").click
-            expect(page).to have_text(I18n.t("shared.menu.joyride.already_ordered_products"))
-          end
-
-          it "shows previous orders after selecting an order cycle" do
-            select "frogs", from: "order_cycle_id"
-            expect(page).to have_content "Next order closing in 2 days"
-            find("#cart").click
-            expect(page).to have_text(I18n.t("shared.menu.joyride.already_ordered_products"))
           end
         end
       end
@@ -209,8 +199,6 @@ feature "As a consumer I want to shop with a distributor", js: true do
 
       it "filters search results properly" do
         visit shop_path
-        select "frogs", from: "order_cycle_id"
-
         fill_in "search", with: "74576345634XXXXXX"
         expect(page).to have_content "Sorry, no results found"
         expect(page).not_to have_content product2.name
@@ -222,15 +210,32 @@ feature "As a consumer I want to shop with a distributor", js: true do
 
       it "returns search results for products where the search term matches one of the product's variant names" do
         visit shop_path
-        select "frogs", from: "order_cycle_id"
-
         fill_in "search", with: "Badg"           # For variant with display_name "Badgers"
 
         within('div.pad-top') do
-          expect(page).to have_content product.name
-          expect(page).to have_content variant2.display_name
           expect(page).not_to have_content product2.name
           expect(page).not_to have_content variant3.display_name
+          expect(page).to have_content product.name
+          expect(page).to have_content variant2.display_name
+        end
+      end
+
+      context "when the distributor has no available payment/shipping methods" do
+        before do
+          distributor.update shipping_methods: [], payment_methods: []
+        end
+
+        # Display only shops are a very useful hack that is described in the user guide
+        it "still renders a display only shop" do
+          visit shop_path
+          expect(page).to have_content product.name
+
+          click_add_to_cart variant
+          expect(page).to have_in_cart product.name
+
+          # Try to go to cart
+          visit main_app.cart_path
+          expect(page).to have_content "The hub you have selected is temporarily closed for orders. Please try again later."
         end
       end
     end
@@ -246,29 +251,31 @@ feature "As a consumer I want to shop with a distributor", js: true do
         before do
           add_variant_to_order_cycle(exchange, variant)
           set_order_cycle(order, oc1)
+          set_order(order)
           visit shop_path
         end
 
         it "should save group buy data to the cart and display it on shopfront reload" do
           # -- Quantity
-          fill_in "variants[#{variant.id}]", with: 6
+          click_add_bulk_to_cart variant, 6
+          close_modal
           expect(page).to have_in_cart product.name
-          wait_until { !cart_dirty }
+          toggle_cart
 
-          li = Spree::Order.order(:created_at).last.line_items.order(:created_at).last
-          expect(li.quantity).to eq(6)
+          expect(order.reload.line_items.first.quantity).to eq(6)
 
           # -- Max quantity
-          fill_in "variant_attributes[#{variant.id}][max_quantity]", with: 7
-          wait_until { !cart_dirty }
+          open_bulk_quantity_modal(variant)
+          click_add_bulk_max_to_cart 1
 
-          li = Spree::Order.order(:created_at).last.line_items.order(:created_at).last
-          expect(li.max_quantity).to eq(7)
+          expect(order.reload.line_items.first.max_quantity).to eq(7)
 
           # -- Reload
           visit shop_path
-          expect(page).to have_field "variants[#{variant.id}]", with: 6
-          expect(page).to have_field "variant_attributes[#{variant.id}][max_quantity]", with: 7
+          within_variant(variant) do
+            expect(page).to have_selector "button.bulk-buy:nth-of-type(1)", text: "6"
+            expect(page).to have_selector "button.bulk-buy:nth-last-of-type(1)", text: "7"
+          end
         end
       end
     end
@@ -287,49 +294,50 @@ feature "As a consumer I want to shop with a distributor", js: true do
       end
 
       it "lets us add and remove products from our cart" do
-        fill_in "variants[#{variant.id}]", with: '1'
+        click_add_to_cart variant
         expect(page).to have_in_cart product.name
-        wait_until { !cart_dirty }
         li = Spree::Order.order(:created_at).last.line_items.order(:created_at).last
         expect(li.quantity).to eq(1)
 
-        fill_in "variants[#{variant.id}]", with: '0'
-        within('li.cart') { expect(page).not_to have_content product.name }
-        wait_until { !cart_dirty }
+        toggle_cart
+        click_remove_from_cart variant
+        toggle_cart
+        within('.cart-sidebar') { expect(page).not_to have_content product.name }
 
         expect(Spree::LineItem.where(id: li)).to be_empty
       end
 
       it "lets us add a quantity greater than on_hand value if product is on_demand" do
-        variant.update_attributes on_hand: 5, on_demand: true
+        variant.update on_hand: 5, on_demand: true
         visit shop_path
 
-        fill_in "variants[#{variant.id}]", with: '10'
+        click_add_to_cart variant, 10
 
-        expect(page).to have_field "variants[#{variant.id}]", with: '10'
+        within_variant(variant) do
+          expect(page).to have_content "10 in cart"
+        end
       end
 
       it "alerts us when we enter a quantity greater than the stock available" do
-        variant.update_attributes on_hand: 5
+        variant.update on_hand: 5
         visit shop_path
 
-        accept_alert 'Insufficient stock available, only 5 remaining' do
-          fill_in "variants[#{variant.id}]", with: '10'
-        end
+        click_add_to_cart variant, 5
 
-        expect(page).to have_field "variants[#{variant.id}]", with: '5'
+        within_variant(variant) do
+          expect(page).to have_content "5 in cart"
+          expect(page).to have_button increase_quantity_symbol, disabled: true
+        end
       end
 
       describe "when a product goes out of stock just before it's added to the cart" do
         it "stops the attempt, shows an error message and refreshes the products asynchronously" do
           expect(page).to have_content "Product"
 
-          variant.update_attributes! on_hand: 0
+          variant.update! on_hand: 0
 
           # -- Messaging
-          expect(page).to have_input "variants[#{variant.id}]"
-          fill_in "variants[#{variant.id}]", with: '1'
-          wait_until { !cart_dirty }
+          click_add_to_cart variant
 
           within(".out-of-stock-modal") do
             expect(page).to have_content "stock levels for one or more of the products in your cart have reduced"
@@ -338,24 +346,25 @@ feature "As a consumer I want to shop with a distributor", js: true do
 
           # -- Page updates
           # Update amount in cart
-          expect(page).to have_field "variants[#{variant.id}]", with: '0', disabled: true
-          expect(page).to have_field "variants[#{variant2.id}]", with: ''
+          within_variant(variant) do
+            expect(page).to have_button "Add", disabled: true
+            expect(page).to have_no_content "in cart"
+          end
+          within_variant(variant2) do
+            expect(page).to have_button "Add", disabled: false
+          end
 
           # Update amount available in product list
           #   If amount falls to zero, variant should be greyed out and input disabled
           expect(page).to have_selector "#variant-#{variant.id}.out-of-stock"
-          expect(page).to have_selector "#variants_#{variant.id}[ofn-on-hand='0']"
-          expect(page).to have_selector "#variants_#{variant.id}[disabled='disabled']"
         end
 
         it 'does not show out of stock modal if product is on_demand' do
           expect(page).to have_content "Product"
 
-          variant.update_attributes! on_hand: 0, on_demand: true
+          variant.update! on_hand: 0, on_demand: true
 
-          expect(page).to have_input "variants[#{variant.id}]"
-          fill_in "variants[#{variant.id}]", with: '1'
-          wait_until { !cart_dirty }
+          click_add_to_cart variant
 
           expect(page).to_not have_selector '.out-of-stock-modal'
         end
@@ -365,13 +374,15 @@ feature "As a consumer I want to shop with a distributor", js: true do
 
           it "does the same" do
             # -- Place in cart so we can set max_quantity, then make out of stock
-            fill_in "variants[#{variant.id}]", with: '1'
-            wait_until { !cart_dirty }
-            variant.update_attributes! on_hand: 0
+            click_add_bulk_to_cart variant
+            variant.update! on_hand: 0
 
             # -- Messaging
-            fill_in "variant_attributes[#{variant.id}][max_quantity]", with: '1'
-            wait_until { !cart_dirty }
+            within(".reveal-modal") do
+              page.all("button", text: increase_quantity_symbol).last.click
+            end
+            close_modal
+            wait_for_cart
 
             within(".out-of-stock-modal") do
               expect(page).to have_content "stock levels for one or more of the products in your cart have reduced"
@@ -380,24 +391,24 @@ feature "As a consumer I want to shop with a distributor", js: true do
 
             # -- Page updates
             # Update amount in cart
-            expect(page).to have_field "variant_attributes[#{variant.id}][max_quantity]", with: '0', disabled: true
+            within_variant(variant) do
+              expect(page).to have_button "Add", disabled: true
+              expect(page).to have_no_content "in cart"
+            end
 
             # Update amount available in product list
-            #   If amount falls to zero, variant should be greyed out and input disabled
+            #   If amount falls to zero, variant should be greyed out
             expect(page).to have_selector "#variant-#{variant.id}.out-of-stock"
-            expect(page).to have_selector "#variants_#{variant.id}_max[disabled='disabled']"
           end
         end
 
         context "when the update is for another product" do
           it "updates quantity" do
-            fill_in "variants[#{variant.id}]", with: '2'
-            wait_until { !cart_dirty }
+            click_add_to_cart variant, 2
 
-            variant.update_attributes! on_hand: 1
+            variant.update! on_hand: 1
 
-            fill_in "variants[#{variant2.id}]", with: '1'
-            wait_until { !cart_dirty }
+            click_add_to_cart variant2
 
             within(".out-of-stock-modal") do
               expect(page).to have_content "stock levels for one or more of the products in your cart have reduced"
@@ -409,21 +420,51 @@ feature "As a consumer I want to shop with a distributor", js: true do
             let(:product) { create(:simple_product, group_buy: true) }
 
             it "does not update max_quantity" do
-              fill_in "variants[#{variant.id}]", with: '2'
-              fill_in "variant_attributes[#{variant.id}][max_quantity]", with: '3'
-              wait_until { !cart_dirty }
-              variant.update_attributes! on_hand: 1
+              click_add_bulk_to_cart variant, 2
+              click_add_bulk_max_to_cart 1
+              close_modal
 
-              fill_in "variants[#{variant2.id}]", with: '1'
-              wait_until { !cart_dirty }
+              variant.update! on_hand: 1
+
+              click_add_bulk_to_cart variant2
 
               within(".out-of-stock-modal") do
                 expect(page).to have_content "stock levels for one or more of the products in your cart have reduced"
                 expect(page).to have_content "#{product.name} - #{variant.unit_to_display} now only has 1 remaining"
               end
 
-              expect(page).to have_field "variants[#{variant.id}]", with: '1'
-              expect(page).to have_field "variant_attributes[#{variant.id}][max_quantity]", with: '3'
+              within_variant(variant) do
+                expect(page).to have_selector "button.bulk-buy:nth-of-type(1)", text: "1"
+                expect(page).to have_selector "button.bulk-buy:nth-last-of-type(1)", text: "3"
+              end
+            end
+          end
+        end
+      end
+
+      context "when a variant is soft-deleted" do
+        describe "adding the soft-deleted variant to the cart" do
+          it "handles it as if the variant has gone out of stock" do
+            variant.delete
+
+            click_add_to_cart variant
+
+            expect_out_of_stock_behavior
+          end
+        end
+
+        context "when the soft-deleted variant has an associated override" do
+          describe "adding the soft-deleted variant to the cart" do
+            let!(:variant_override) {
+              create(:variant_override, variant: variant, hub: distributor, count_on_hand: 100)
+            }
+
+            it "handles it as if the variant has gone out of stock" do
+              variant.delete
+
+              click_add_to_cart variant
+
+              expect_out_of_stock_behavior
             end
           end
         end
@@ -435,11 +476,13 @@ feature "As a consumer I want to shop with a distributor", js: true do
         visit shop_path
         expect(page).to have_content "Orders are closed"
       end
+
       it "shows the last order cycle" do
         oc1 = create(:simple_order_cycle, distributors: [distributor], orders_open_at: 17.days.ago, orders_close_at: 10.days.ago)
         visit shop_path
         expect(page).to have_content "The last cycle closed 10 days ago"
       end
+
       it "shows the next order cycle" do
         oc1 = create(:simple_order_cycle, distributors: [distributor], orders_open_at: 10.days.from_now, orders_close_at: 17.days.from_now)
         visit shop_path
@@ -466,6 +509,7 @@ feature "As a consumer I want to shop with a distributor", js: true do
           expect(page).to have_content "Only approved customers can access this shop."
           expect(page).to have_content "login or signup"
           expect(page).to have_no_content product.name
+          expect(page).not_to have_selector "ordercycle"
         end
       end
 
@@ -474,7 +518,7 @@ feature "As a consumer I want to shop with a distributor", js: true do
         let(:user) { create(:user, bill_address: address, ship_address: address) }
 
         before do
-          quick_login_as user
+          login_as user
         end
 
         context "as non-customer" do
@@ -483,6 +527,7 @@ feature "As a consumer I want to shop with a distributor", js: true do
             expect(page).to have_content "Only approved customers can access this shop."
             expect(page).to have_content "please contact #{distributor.name}"
             expect(page).to have_no_content product.name
+            expect(page).not_to have_selector "ordercycle"
           end
         end
 
@@ -521,7 +566,7 @@ feature "As a consumer I want to shop with a distributor", js: true do
         let!(:returning_user) { create(:user, email: unregistered_customer.email) }
 
         before do
-          quick_login_as returning_user
+          login_as returning_user
         end
 
         it "shows the products without customer only message" do
@@ -535,5 +580,19 @@ feature "As a consumer I want to shop with a distributor", js: true do
   def shows_products_without_customer_warning
     expect(page).to have_no_content "This shop is for customers only."
     expect(page).to have_content product.name
+  end
+
+  def expect_out_of_stock_behavior
+    # Shows an "out of stock" modal, with helpful user feedback
+    within(".out-of-stock-modal") do
+      expect(page).to have_content I18n.t('js.out_of_stock.out_of_stock_text')
+    end
+
+    # Removes the item from the client-side cart and marks the variant as unavailable
+    expect(page).to have_selector "#variant-#{variant.id}.out-of-stock"
+    within_variant(variant) do
+      expect(page).to have_button "Add", disabled: true
+      expect(page).to have_no_content "in cart"
+    end
   end
 end

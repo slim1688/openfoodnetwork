@@ -1,13 +1,163 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
-describe Spree::Order do
+describe Spree::Order::Checkout do
+  let(:order) { Spree::Order.new }
+
+  context "with default state machine" do
+    let(:transitions) do
+      [
+        { address: :delivery },
+        { delivery: :payment },
+        { payment: :complete },
+        { delivery: :complete }
+      ]
+    end
+
+    it "has the following transitions" do
+      transitions.each do |transition|
+        transition = Spree::Order.find_transition(from: transition.keys.first,
+                                                  to: transition.values.first)
+        expect(transition).to_not be_nil
+      end
+    end
+
+    it "does not have a transition from delivery to confirm" do
+      transition = Spree::Order.find_transition(from: :delivery, to: :confirm)
+      expect(transition).to be_nil
+    end
+
+    it '.find_transition when contract was broken' do
+      expect(Spree::Order.find_transition({ foo: :bar, baz: :dog })).to be_falsy
+    end
+
+    context "#checkout_steps" do
+      context "when payment not required" do
+        before { allow(order).to receive_messages payment_required?: false }
+        specify do
+          expect(order.checkout_steps).to eq %w(address delivery complete)
+        end
+      end
+
+      context "when payment required" do
+        before { allow(order).to receive_messages payment_required?: true }
+        specify do
+          expect(order.checkout_steps).to eq %w(address delivery payment complete)
+        end
+      end
+    end
+
+    it "starts out at cart" do
+      expect(order.state).to eq "cart"
+    end
+
+    it "transitions to address" do
+      order.line_items << FactoryBot.create(:line_item)
+      order.email = "user@example.com"
+      order.next!
+      expect(order.state).to eq "address"
+    end
+
+    it "cannot transition to address without any line items" do
+      expect(order.line_items).to be_blank
+      expect(lambda { order.next! }).to raise_error(StateMachines::InvalidTransition,
+                                                    /#{Spree.t(:there_are_no_items_for_this_order)}/)
+    end
+
+    context "from address" do
+      before do
+        order.state = 'address'
+        order.shipments << create(:shipment)
+        order.email = "user@example.com"
+        order.save!
+      end
+
+      it "transitions to delivery" do
+        allow(order).to receive_messages(ensure_available_shipping_rates: true)
+        order.next!
+        expect(order.state).to eq "delivery"
+      end
+
+      context "cannot transition to delivery" do
+        context "if there are no shipping rates for any shipment" do
+          specify do
+            transition = lambda { order.next! }
+            expect(transition).to raise_error(StateMachines::InvalidTransition,
+                                              /#{Spree.t(:items_cannot_be_shipped)}/)
+          end
+        end
+      end
+    end
+
+    context "from delivery" do
+      before do
+        order.state = 'delivery'
+      end
+
+      context "with payment required" do
+        before do
+          allow(order).to receive_messages payment_required?: true
+        end
+
+        it "transitions to payment" do
+          order.next!
+          expect(order.state).to eq 'payment'
+        end
+      end
+
+      context "without payment required" do
+        before do
+          allow(order).to receive_messages payment_required?: false
+        end
+
+        it "transitions to complete" do
+          order.next!
+          expect(order.state).to eq "complete"
+        end
+      end
+    end
+
+    context "from payment" do
+      before do
+        order.state = 'payment'
+      end
+
+      context "when payment is required" do
+        before do
+          allow(order).to receive_messages confirmation_required?: false
+          allow(order).to receive_messages payment_required?: true
+        end
+
+        it "transitions to complete" do
+          expect(order).to receive(:process_payments!).once.and_return true
+          order.next!
+          expect(order.state).to eq "complete"
+        end
+      end
+
+      # Regression test for Spree #2028
+      context "when payment is not required" do
+        before do
+          allow(order).to receive_messages payment_required?: false
+        end
+
+        it "does not call process payments" do
+          expect(order).to_not receive(:process_payments!)
+          order.next!
+          expect(order.state).to eq "complete"
+        end
+      end
+    end
+  end
+
   describe 'event :restart_checkout' do
-    let(:order) { create(:order) }
+    let(:order) { build_stubbed(:order) }
 
     context 'when the order is not complete' do
       before { allow(order).to receive(:completed?) { false } }
 
-      it 'does transition to cart state' do
+      it 'transitions to cart state' do
         expect(order.state).to eq('cart')
       end
     end
@@ -18,7 +168,7 @@ describe Spree::Order do
       it 'raises' do
         expect { order.restart_checkout! }
           .to raise_error(
-            StateMachine::InvalidTransition,
+            StateMachines::InvalidTransition,
             /Cannot transition state via :restart_checkout/
           )
       end
@@ -42,9 +192,6 @@ describe Spree::Order do
     it "can progress to delivery" do
       shipping_method.shipping_categories << other_shipping_category
 
-      # If the shipping category package splitter is enabled,
-      #   an order with products with two shipping categories will be split into two shipments
-      #   and the spec will fail with a unique constraint error on index_spree_shipments_on_order_id
       order.next
       order.next
       expect(order.state).to eq "delivery"

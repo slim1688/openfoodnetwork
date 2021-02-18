@@ -1,7 +1,236 @@
+# frozen_string_literal: false
+
 require 'spec_helper'
+require 'spree/core/product_duplicator'
 
 module Spree
   describe Product do
+    context 'product instance' do
+      let(:product) { create(:product) }
+
+      context '#duplicate' do
+        before do
+          allow(product).to receive_messages taxons: [create(:taxon)]
+        end
+
+        it 'duplicates product' do
+          clone = product.duplicate
+          expect(clone.name).to eq 'COPY OF ' + product.name
+          expect(clone.master.sku).to eq ''
+          expect(clone.images.size).to eq product.images.size
+        end
+      end
+
+      context "product has no variants" do
+        context "#destroy" do
+          it "should set deleted_at value" do
+            product.destroy
+            expect(product.deleted_at).to_not be_nil
+            expect(product.master.deleted_at).to_not be_nil
+          end
+        end
+      end
+
+      context "product has variants" do
+        before do
+          create(:variant, product: product)
+        end
+
+        context "#destroy" do
+          it "should set deleted_at value" do
+            product.destroy
+            expect(product.deleted_at).to_not be_nil
+            expect(product.variants_including_master.all? { |v| !v.deleted_at.nil? }).to be_truthy
+          end
+        end
+      end
+
+      context "#price" do
+        # Regression test for Spree #1173
+        it 'strips non-price characters' do
+          product.price = "$10"
+          expect(product.price).to eq 10.0
+        end
+      end
+
+      context "#display_price" do
+        before { product.price = 10.55 }
+
+        context "with display_currency set to true" do
+          before { Spree::Config[:display_currency] = true }
+
+          it "shows the currency" do
+            expect(product.display_price.to_s).to eq "$10.55 #{Spree::Config[:currency]}"
+          end
+        end
+
+        context "with display_currency set to false" do
+          before { Spree::Config[:display_currency] = false }
+
+          it "does not include the currency" do
+            expect(product.display_price.to_s).to eq "$10.55"
+          end
+        end
+
+        context "with currency set to JPY" do
+          before do
+            product.master.default_price.currency = 'JPY'
+            product.master.default_price.save!
+            Spree::Config[:currency] = 'JPY'
+          end
+
+          it "displays the currency in yen" do
+            expect(product.display_price.to_s).to eq "¥11"
+          end
+        end
+      end
+
+      describe 'Variants sorting' do
+        context 'without master variant' do
+          it 'sorts variants by position' do
+            expect(product.variants.to_sql).to match(/ORDER BY (\`|\")spree_variants(\`|\").position ASC/)
+          end
+        end
+
+        context 'with master variant' do
+          it 'sorts variants by position' do
+            expect(product.variants_including_master.to_sql).to match(/ORDER BY (\`|\")spree_variants(\`|\").position ASC/)
+          end
+        end
+      end
+    end
+
+    context "permalink" do
+      context "build product with similar name" do
+        let!(:other) { create(:product, name: 'foo bar') }
+        let(:product) { build(:product, name: 'foo') }
+
+        before { product.valid? }
+
+        it "increments name" do
+          expect(product.permalink).to eq 'foo-1'
+        end
+      end
+
+      context "build permalink with quotes" do
+        it "does not save quotes" do
+          product = create(:product, name: "Joe's", permalink: "joe's")
+          expect(product.permalink).to eq "joe-s"
+        end
+      end
+
+      context "permalinks must be unique" do
+        before do
+          @product1 = create(:product, name: 'foo')
+        end
+
+        it "cannot create another product with the same permalink" do
+          pending '[Spree build] Failing spec'
+          @product2 = create(:product, name: 'foo')
+          expect do
+            @product2.update(permalink: @product1.permalink)
+          end.to raise_error(ActiveRecord::RecordNotUnique)
+        end
+      end
+
+      it "supports Chinese" do
+        expect(create(:product, name: "你好").permalink).to eq "ni-hao"
+      end
+
+      context "manual permalink override" do
+        let(:product) { create(:product, name: "foo") }
+
+        it "calling save_permalink with a parameter" do
+          product.name = "foobar"
+          product.save
+          expect(product.permalink).to eq "foo"
+
+          product.save_permalink(product.name)
+          expect(product.permalink).to eq "foobar"
+        end
+      end
+
+      context "override permalink of deleted product" do
+        let(:product) { create(:product, name: "foo") }
+
+        it "should create product with same permalink from name like deleted product" do
+          expect(product.permalink).to eq "foo"
+          product.destroy
+
+          new_product = create(:product, name: "foo")
+          expect(new_product.permalink).to eq "foo"
+        end
+      end
+    end
+
+    context "properties" do
+      let(:product) { create(:product) }
+
+      it "should properly assign properties" do
+        product.set_property('the_prop', 'value1')
+        expect(product.property('the_prop')).to eq 'value1'
+
+        product.set_property('the_prop', 'value2')
+        expect(product.property('the_prop')).to eq 'value2'
+      end
+
+      it "should not create duplicate properties when set_property is called" do
+        expect {
+          product.set_property('the_prop', 'value2')
+          product.save
+          product.reload
+        }.not_to change(product.properties, :length)
+
+        expect {
+          product.set_property('the_prop_new', 'value')
+          product.save
+          product.reload
+          expect(product.property('the_prop_new')).to eq 'value'
+        }.to change { product.properties.length }.by(1)
+      end
+
+      # Regression test for #2455
+      it "should not overwrite properties' presentation names" do
+        Spree::Property.where(name: 'foo').first_or_create!(presentation: "Foo's Presentation Name")
+        product.set_property('foo', 'value1')
+        product.set_property('bar', 'value2')
+        expect(Spree::Property.where(name: 'foo').first.presentation).to eq "Foo's Presentation Name"
+        expect(Spree::Property.where(name: 'bar').first.presentation).to eq "bar"
+      end
+    end
+
+    # Regression tests for Spree #2352
+    context "classifications and taxons" do
+      it "is joined through classifications" do
+        reflection = Spree::Product.reflect_on_association(:taxons)
+        reflection.options[:through] = :classifications
+      end
+
+      it "will delete all classifications" do
+        reflection = Spree::Product.reflect_on_association(:classifications)
+        reflection.options[:dependent] = :delete_all
+      end
+    end
+
+    describe '#total_on_hand' do
+      it 'returns sum of stock items count_on_hand' do
+        product = build(:product)
+        allow(product).to receive_messages stock_items: [double(Spree::StockItem, count_on_hand: 5)]
+        expect(product.total_on_hand).to eql(5)
+      end
+    end
+
+    context "has stock movements" do
+      let(:product) { create(:product) }
+      let(:variant) { product.master }
+      let(:stock_item) { variant.stock_items.first }
+
+      it "doesnt raise ReadOnlyRecord error" do
+        Spree::StockMovement.create!(stock_item: stock_item, quantity: 1)
+        expect { product.destroy }.not_to raise_error
+      end
+    end
+
     describe "associations" do
       it { is_expected.to belong_to(:supplier) }
       it { is_expected.to belong_to(:primary_taxon) }
@@ -14,6 +243,10 @@ module Spree
 
       it "requires a primary taxon" do
         expect(build(:simple_product, taxons: [], primary_taxon: nil)).not_to be_valid
+      end
+
+      it "requires a unit value" do
+        expect(build(:simple_product, unit_value: nil)).not_to be_valid
       end
 
       it "requires a supplier" do
@@ -40,7 +273,8 @@ module Spree
 
         it "generates a unique permalink" do
           product1 = create(:product, name: "Banana Permanenta", permalink: nil)
-          product2 = create(:product, name: "Banana Permanenta", permalink: nil)
+          product2 = build_stubbed(:product, name: "Banana Permanenta", permalink: nil)
+          expect(product2).to be_valid
           expect(product2.permalink).to_not eq product1.permalink
           # "banana-permanenta" != "banana-permanenta-1" # generated by Spree
         end
@@ -149,7 +383,7 @@ module Spree
       end
 
       context "a basic product" do
-        let(:product) { create(:simple_product) }
+        let(:product) { build_stubbed(:simple_product) }
 
         it "requires variant unit fields" do
           product.variant_unit = nil
@@ -254,6 +488,37 @@ module Spree
           ex.variants << p.master
 
           expect(Product.in_distributor(d)).to be_empty
+        end
+      end
+
+      describe "in_distributors" do
+        let!(:distributor1) { create(:distributor_enterprise) }
+        let!(:distributor2) { create(:distributor_enterprise) }
+        let!(:product1) { create(:product) }
+        let!(:product2) { create(:product) }
+        let!(:product3) { create(:product) }
+        let!(:product4) { create(:product) }
+        let!(:order_cycle1) {
+          create(:order_cycle, distributors: [distributor1],
+                               variants: [product1.variants.first, product2.variants.first])
+        }
+        let!(:order_cycle2) {
+          create(:order_cycle, distributors: [distributor2],
+                               variants: [product3.variants.first])
+        }
+
+        it "returns distributed products for a given Enterprise AR relation" do
+          distributors = Enterprise.where(id: [distributor1.id, distributor2.id]).to_a
+
+          expect(Product.in_distributors(distributors)).to include product1, product2, product3
+          expect(Product.in_distributors(distributors)).to_not include product4
+        end
+
+        it "returns distributed products for a given array of enterprise ids" do
+          distributors_ids = [distributor1.id, distributor2.id]
+
+          expect(Product.in_distributors(distributors_ids)).to include product1, product2, product3
+          expect(Product.in_distributors(distributors_ids)).to_not include product4
         end
       end
 
@@ -450,9 +715,9 @@ module Spree
         pb = Spree::Property.create! name: 'B', presentation: 'B'
         pc = Spree::Property.create! name: 'C', presentation: 'C'
 
-        product.product_properties.create!({ property_id: pa.id, value: '1', position: 1 }, without_protection: true)
-        product.product_properties.create!({ property_id: pc.id, value: '3', position: 3 }, without_protection: true)
-        supplier.producer_properties.create!({ property_id: pb.id, value: '2', position: 2 }, without_protection: true)
+        product.product_properties.create!({ property_id: pa.id, value: '1', position: 1 })
+        product.product_properties.create!({ property_id: pc.id, value: '3', position: 3 })
+        supplier.producer_properties.create!({ property_id: pb.id, value: '2', position: 2 })
 
         expect(product.properties_including_inherited).to eq(
           [{ id: pa.id, name: "A", value: '1' },
@@ -500,24 +765,24 @@ module Spree
         let!(:ot_volume) { create(:option_type, name: 'unit_volume', presentation: 'Volume') }
 
         it "removes the old option type and assigns the new one" do
-          p.update_attributes!(variant_unit: 'volume', variant_unit_scale: 0.001)
+          p.update!(variant_unit: 'volume', variant_unit_scale: 0.001)
           expect(p.option_types).to eq([ot_volume])
         end
 
         it "does not remove and re-add the option type if it is not changed" do
           expect(p.option_types).to receive(:delete).never
-          p.update_attributes!(name: 'foo')
+          p.update!(name: 'foo')
         end
 
         it "removes the related option values from all its variants and replaces them" do
-          ot = Spree::OptionType.find_by_name 'unit_weight'
+          ot = Spree::OptionType.find_by name: 'unit_weight'
           v = create(:variant, unit_value: 1, product: p)
           p.reload
 
           expect(v.option_values.map(&:name).include?("1L")).to eq(false)
           expect(v.option_values.map(&:name).include?("1g")).to eq(true)
           expect {
-            p.update_attributes!(variant_unit: 'volume', variant_unit_scale: 0.001)
+            p.update!(variant_unit: 'volume', variant_unit_scale: 0.001)
           }.to change(p.master.option_values(true), :count).by(0)
           v.reload
           expect(v.option_values.map(&:name).include?("1L")).to eq(true)
@@ -525,14 +790,14 @@ module Spree
         end
 
         it "removes the related option values from its master variant and replaces them" do
-          ot = Spree::OptionType.find_by_name 'unit_weight'
-          p.master.update_attributes!(unit_value: 1)
+          ot = Spree::OptionType.find_by name: 'unit_weight'
+          p.master.update!(unit_value: 1)
           p.reload
 
           expect(p.master.option_values.map(&:name).include?("1L")).to eq(false)
           expect(p.master.option_values.map(&:name).include?("1g")).to eq(true)
           expect {
-            p.update_attributes!(variant_unit: 'volume', variant_unit_scale: 0.001)
+            p.update!(variant_unit: 'volume', variant_unit_scale: 0.001)
           }.to change(p.master.option_values(true), :count).by(0)
           p.reload
           expect(p.master.option_values.map(&:name).include?("1L")).to eq(true)
@@ -575,57 +840,6 @@ module Spree
 
           # And the option values themselves should still exist
           expect(Spree::OptionValue.where(id: [ov1.id, ov2.id]).count).to eq(2)
-        end
-      end
-    end
-
-    describe "stock filtering" do
-      it "considers products that are on_demand as being in stock" do
-        product = create(:simple_product, on_demand: true)
-        product.master.update_attribute(:on_hand, 0)
-        expect(product.has_stock?).to eq(true)
-      end
-
-      describe "finding products in stock for a particular distribution" do
-        it "returns on-demand products" do
-          p = create(:simple_product, on_demand: true)
-          p.variants.first.update_attributes!(on_hand: 0, on_demand: true)
-          d = create(:distributor_enterprise)
-          oc = create(:simple_order_cycle, distributors: [d])
-          oc.exchanges.outgoing.first.variants << p.variants.first
-
-          expect(p).to have_stock_for_distribution(oc, d)
-        end
-
-        it "returns products with in-stock variants" do
-          p = create(:simple_product)
-          v = create(:variant, product: p)
-          v.update_attribute(:on_hand, 1)
-          d = create(:distributor_enterprise)
-          oc = create(:simple_order_cycle, distributors: [d])
-          oc.exchanges.outgoing.first.variants << v
-
-          expect(p).to have_stock_for_distribution(oc, d)
-        end
-
-        it "returns products with on-demand variants" do
-          p = create(:simple_product)
-          v = create(:variant, product: p, on_demand: true)
-          v.update_attribute(:on_hand, 0)
-          d = create(:distributor_enterprise)
-          oc = create(:simple_order_cycle, distributors: [d])
-          oc.exchanges.outgoing.first.variants << v
-
-          expect(p).to have_stock_for_distribution(oc, d)
-        end
-
-        it "does not return products that have stock not in the distribution" do
-          p = create(:simple_product)
-          p.master.update_attribute(:on_hand, 1)
-          d = create(:distributor_enterprise)
-          oc = create(:simple_order_cycle, distributors: [d])
-
-          expect(p).not_to have_stock_for_distribution(oc, d)
         end
       end
     end

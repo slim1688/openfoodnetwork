@@ -175,45 +175,45 @@ module OpenFoodNetwork
       adjustment.adjustable.is_a?(Spree::Order) ? adjustment.adjustable : nil
     end
 
-    def invoice_number_for(order, i)
-      @opts[:initial_invoice_number] ? @opts[:initial_invoice_number].to_i + i : order.number
+    def invoice_number_for(order, idx)
+      @opts[:initial_invoice_number] ? @opts[:initial_invoice_number].to_i + idx : order.number
     end
 
     def total_untaxable_products(order)
-      order.line_items.without_tax.sum(&:amount)
+      order.line_items.without_tax.to_a.sum(&:amount)
     end
 
     def total_taxable_products(order)
-      order.line_items.with_tax.sum(&:amount)
+      order.line_items.with_tax.to_a.sum(&:amount)
     end
 
     def total_untaxable_fees(order)
-      order.adjustments.enterprise_fee.without_tax.sum(&:amount)
+      order.adjustments.enterprise_fee.without_tax.sum(:amount)
     end
 
     def total_taxable_fees(order)
-      order.adjustments.enterprise_fee.with_tax.sum(&:amount)
+      order.adjustments.enterprise_fee.with_tax.sum(:amount)
     end
 
     def total_shipping(order)
-      order.adjustments.shipping.sum(&:amount)
+      order.adjustments.shipping.sum(:amount)
     end
 
     def total_transaction(order)
-      order.adjustments.payment_fee.sum(&:amount)
+      order.adjustments.payment_fee.sum(:amount)
     end
 
     def tax_on_shipping_s(order)
-      tax_on_shipping = order.adjustments.shipping.sum(&:included_tax) > 0
+      tax_on_shipping = order.adjustments.shipping.sum(:included_tax) > 0
       tax_on_shipping ? I18n.t(:report_header_gst_on_income) : I18n.t(:report_header_gst_free_income)
     end
 
     def total_untaxable_admin_adjustments(order)
-      order.adjustments.admin.without_tax.sum(&:amount)
+      order.adjustments.admin.without_tax.sum(:amount)
     end
 
     def total_taxable_admin_adjustments(order)
-      order.adjustments.admin.with_tax.sum(&:amount)
+      order.adjustments.admin.with_tax.sum(:amount)
     end
 
     def detail?

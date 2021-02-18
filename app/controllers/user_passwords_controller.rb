@@ -1,7 +1,7 @@
 class UserPasswordsController < Spree::UserPasswordsController
   layout 'darkswarm'
 
-  before_filter :set_admin_redirect, only: :edit
+  before_action :set_admin_redirect, only: :edit
 
   def create
     render_unconfirmed_response && return if user_unconfirmed?
@@ -10,7 +10,7 @@ class UserPasswordsController < Spree::UserPasswordsController
 
     if resource.errors.empty?
       set_flash_message(:success, :send_instructions) if is_navigational_format?
-      respond_with resource, location: spree.login_path
+      respond_with resource, location: main_app.login_path
     else
       respond_to do |format|
         format.html do
@@ -34,7 +34,7 @@ class UserPasswordsController < Spree::UserPasswordsController
   end
 
   def user_unconfirmed?
-    user = Spree::User.find_by_email(params[:spree_user][:email])
+    user = Spree::User.find_by(email: params[:spree_user][:email])
     user && !user.confirmed?
   end
 end

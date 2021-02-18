@@ -1,4 +1,5 @@
 Openfoodnetwork::Application.routes.draw do
+
   root :to => 'home#index'
 
   # Redirects from old URLs avoid server errors and helps search engines
@@ -8,6 +9,7 @@ Openfoodnetwork::Application.routes.draw do
   get "/about_us", to: redirect(ContentConfig.footer_about_url)
 
   get "/login", to: redirect("/#/login")
+  get '/unauthorized', :to => 'home#unauthorized', :as => :unauthorized
 
   get "/discourse/login", to: "discourse_sso#login"
   get "/discourse/sso", to: "discourse_sso#sso"
@@ -24,9 +26,10 @@ Openfoodnetwork::Application.routes.draw do
   get "/learn", to: redirect("https://openfoodnetwork.org/#{ENV['DEFAULT_COUNTRY_CODE'].andand.downcase}/learn/")
 
   get "/cart", :to => "spree/orders#edit", :as => :cart
-  put "/cart", :to => "spree/orders#update", :as => :update_cart
+  patch "/cart", :to => "spree/orders#update", :as => :update_cart
   put "/cart/empty", :to => 'spree/orders#empty', :as => :empty_cart
   get '/orders/:id/token/:token' => 'spree/orders#show', :as => :token_order
+  get '/payments/:id/authorize' => 'payments#redirect_to_authorize', as: "authorize_payment"
 
   resource :cart, controller: "cart" do
     post :populate
@@ -88,6 +91,9 @@ Openfoodnetwork::Application.routes.draw do
   get "/enterprises/:permalink", to: redirect("/") # Legacy enterprise URL
 
   get 'sitemap.xml', to: 'sitemap#index', defaults: { format: 'xml' }
+
+  # Mount DFC API endpoints
+  mount DfcProvider::Engine, at: '/'
 
   # Mount Spree's routes
   mount Spree::Core::Engine, :at => '/'

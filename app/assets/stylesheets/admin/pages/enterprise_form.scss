@@ -1,0 +1,18 @@
+@import "../variables";
+
+span.unavailable,
+span.available {
+  font-weight: bold;
+
+  i {
+    font-size: 150%;
+  }
+}
+
+span.available {
+  color: $spree-green;
+}
+
+span.unavailable {
+  color: $warning-red;
+}

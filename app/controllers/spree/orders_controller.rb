@@ -1,32 +1,33 @@
-require 'spree/core/controller_helpers/order_decorator'
-require 'spree/core/controller_helpers/auth_decorator'
-
 module Spree
-  class OrdersController < Spree::StoreController
+  class OrdersController < ::BaseController
     include OrderCyclesHelper
+    include Rails.application.routes.url_helpers
+
     layout 'darkswarm'
 
     ssl_required :show
 
-    before_filter :check_authorization
+    before_action :check_authorization
     rescue_from ActiveRecord::RecordNotFound, with: :render_404
     helper 'spree/products', 'spree/orders'
 
     respond_to :html
     respond_to :json
 
-    before_filter :update_distribution, only: :update
-    before_filter :filter_order_params, only: :update
-    before_filter :enable_embedded_shopfront
+    before_action :update_distribution, only: :update
+    before_action :filter_order_params, only: :update
+    before_action :enable_embedded_shopfront
 
-    prepend_before_filter :require_order_authentication, only: :show
-    prepend_before_filter :require_order_cycle, only: :edit
-    prepend_before_filter :require_distributor_chosen, only: :edit
-    before_filter :check_hub_ready_for_checkout, only: :edit
-    before_filter :check_at_least_one_line_item, only: :update
+    prepend_before_action :require_order_authentication, only: :show
+    prepend_before_action :require_order_cycle, only: :edit
+    prepend_before_action :require_distributor_chosen, only: :edit
+    before_action :check_hub_ready_for_checkout, only: :edit
+    before_action :check_at_least_one_line_item, only: :update
 
     def show
-      @order = Spree::Order.find_by_number!(params[:id])
+      @order = Spree::Order.find_by!(number: params[:id])
+      ProcessPaymentIntent.new(params["payment_intent"], @order).call!
+      @order.reload
     end
 
     def empty
@@ -39,7 +40,7 @@ module Spree
 
     def check_authorization
       session[:access_token] ||= params[:token]
-      order = Spree::Order.find_by_number(params[:id]) || current_order
+      order = Spree::Order.find_by(number: params[:id]) || current_order
 
       if order
         authorize! :edit, order, session[:access_token]
@@ -74,15 +75,11 @@ module Spree
         redirect_to(main_app.root_path) && return
       end
 
-      if @order.update_attributes(params[:order])
+      if @order.update(order_params)
         discard_empty_line_items
         with_open_adjustments { update_totals_and_taxes }
 
-        if @order == current_order
-          fire_event('spree.order.contents_changed')
-        else
-          @order.update_distribution_charge!
-        end
+        @order.update_distribution_charge!
 
         respond_with(@order) do |format|
           format.html do
@@ -133,26 +130,15 @@ module Spree
 
     def remove_missing_line_items(attrs)
       attrs.select do |_i, line_item|
-        Spree::LineItem.find_by_id(line_item[:id])
+        Spree::LineItem.find_by(id: line_item[:id])
       end
     end
 
-    def clear
-      @order = current_order(true)
-      @order.empty!
-      @order.set_order_cycle! nil
-      redirect_to main_app.enterprise_path(@order.distributor.id)
-    end
-
-    def order_cycle_expired
-      @order_cycle = OrderCycle.find session[:expired_order_cycle_id]
-    end
-
     def cancel
-      @order = Spree::Order.find_by_number!(params[:id])
+      @order = Spree::Order.find_by!(number: params[:id])
       authorize! :cancel, @order
 
-      if @order.cancel
+      if CustomerOrderCancellation.new(@order).call
         flash[:success] = I18n.t(:orders_your_order_has_been_cancelled)
       else
         flash[:error] = I18n.t(:orders_could_not_cancel)
@@ -166,7 +152,7 @@ module Spree
     # recalculates the shipment taxes
     def update_totals_and_taxes
       @order.updater.update_totals
-      @order.shipment.ensure_correct_adjustment_with_included_tax if @order.shipment
+      @order.shipment&.ensure_correct_adjustment
     end
 
     # Sets the adjustments to open to perform the block's action and restores
@@ -194,7 +180,7 @@ module Spree
       return if session[:access_token] || params[:token] || spree_current_user
 
       flash[:error] = I18n.t("spree.orders.edit.login_to_view_order")
-      require_login_then_redirect_to request.env['PATH_INFO']
+      redirect_to main_app.root_path(anchor: "login?after_login=#{request.env['PATH_INFO']}")
     end
 
     def order_to_update
@@ -207,7 +193,7 @@ module Spree
     # If a specific order is requested, return it if it is COMPLETE and
     # changes are allowed and the user has access. Return nil if not.
     def changeable_order_from_number
-      order = Spree::Order.complete.find_by_number(params[:id])
+      order = Spree::Order.complete.find_by(number: params[:id])
       return nil unless order.andand.changes_allowed? && can?(:update, order)
 
       order
@@ -223,6 +209,13 @@ module Spree
         flash[:error] = I18n.t(:orders_cannot_remove_the_final_item)
         redirect_to order_path(order_to_update)
       end
+    end
+
+    def order_params
+      params.require(:order).permit(
+        :distributor_id, :order_cycle_id,
+        line_items_attributes: [:id, :quantity]
+      )
     end
   end
 end

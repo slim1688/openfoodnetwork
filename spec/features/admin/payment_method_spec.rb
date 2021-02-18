@@ -1,11 +1,13 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 feature '
     As a Super Admin
     I want to be able to set a distributor on each payment method
 ' do
-  include AuthenticationWorkflow
   include WebHelper
+  include AuthenticationHelper
 
   background do
     @distributors = (1..3).map { create(:distributor_enterprise) }
@@ -13,9 +15,7 @@ feature '
 
   describe "creating a payment method", js: true do
     scenario "assigning a distributor to the payment method" do
-      login_to_admin_section
-
-      click_link 'Configuration'
+      login_as_admin_and_visit spree.edit_admin_general_settings_path
       click_link 'Payment Methods'
       click_link 'New Payment Method'
 
@@ -26,7 +26,7 @@ feature '
 
       expect(flash_message).to eq('Payment Method has been successfully created!')
 
-      payment_method = Spree::PaymentMethod.find_by_name('Cheque payment method')
+      payment_method = Spree::PaymentMethod.find_by(name: 'Cheque payment method')
       expect(payment_method.distributors).to eq([@distributors[0]])
     end
 
@@ -39,6 +39,12 @@ feature '
       let!(:disconnected_stripe_account) { create(:stripe_account, enterprise: revoked_account_enterprise, stripe_user_id: "acc_revoked123") }
       let!(:stripe_account_mock) { { id: "acc_connected123", business_name: "My Org", charges_enabled: true } }
 
+      around do |example|
+        original_stripe_connect_enabled = Spree::Config[:stripe_connect_enabled]
+        example.run
+        Spree::Config.set(stripe_connect_enabled: original_stripe_connect_enabled)
+      end
+
       before do
         Spree::Config.set(stripe_connect_enabled: true)
         allow(Stripe).to receive(:api_key) { "sk_test_12345" }
@@ -47,7 +53,7 @@ feature '
       end
 
       it "communicates the status of the stripe connection to the user" do
-        quick_login_as user
+        login_as user
         visit spree.new_admin_payment_method_path
 
         select2_select "Stripe", from: "payment_method_type"
@@ -70,14 +76,12 @@ feature '
 
     scenario "checking a single distributor is checked by default" do
       2.times.each { Enterprise.last.destroy }
-      quick_login_as_admin
-      visit spree.new_admin_payment_method_path
+      login_as_admin_and_visit spree.new_admin_payment_method_path
       expect(page).to have_field "payment_method_distributor_ids_#{@distributors[0].id}", checked: true
     end
 
     scenario "checking more than a distributor displays no default choice" do
-      quick_login_as_admin
-      visit spree.new_admin_payment_method_path
+      login_as_admin_and_visit spree.new_admin_payment_method_path
       expect(page).to have_field "payment_method_distributor_ids_#{@distributors[0].id}", checked: false
       expect(page).to have_field "payment_method_distributor_ids_#{@distributors[1].id}", checked: false
       expect(page).to have_field "payment_method_distributor_ids_#{@distributors[2].id}", checked: false
@@ -85,10 +89,9 @@ feature '
   end
 
   scenario "updating a payment method", js: true do
-    payment_method = create(:payment_method, distributors: [@distributors[0]])
-    quick_login_as_admin
-
-    visit spree.edit_admin_payment_method_path payment_method
+    payment_method = create(:payment_method, distributors: [@distributors[0]],
+                                             calculator: build(:calculator_flat_rate))
+    login_as_admin_and_visit spree.edit_admin_payment_method_path payment_method
 
     fill_in 'payment_method_name', with: 'New PM Name'
     find(:css, "tags-input .tags input").set "member\n"
@@ -108,7 +111,7 @@ feature '
 
     expect(first('tags-input .tag-list ti-tag-item')).to have_content "member"
 
-    payment_method = Spree::PaymentMethod.find_by_name('New PM Name')
+    payment_method = Spree::PaymentMethod.find_by(name: 'New PM Name')
     expect(payment_method.distributors).to include @distributors[1], @distributors[2]
     expect(payment_method.distributors).not_to include @distributors[0]
     expect(payment_method.type).to eq "Spree::Gateway::PayPalExpress"
@@ -123,7 +126,7 @@ feature '
     expect(page).to have_field 'Password', with: ''
     expect(first('tags-input .tag-list ti-tag-item')).to have_content "member"
 
-    payment_method = Spree::PaymentMethod.find_by_name('New PM Name')
+    payment_method = Spree::PaymentMethod.find_by(name: 'New PM Name')
     expect(payment_method.tag_list).to eq ["member"]
     expect(payment_method.preferences[:login]).to eq 'otherlogin'
     expect(payment_method.preferences[:password]).to eq 'secret'
@@ -131,7 +134,7 @@ feature '
   end
 
   context "as an enterprise user", js: true do
-    let(:enterprise_user) { create_enterprise_user }
+    let(:enterprise_user) { create(:user) }
     let(:distributor1) { create(:distributor_enterprise, name: 'First Distributor') }
     let(:distributor2) { create(:distributor_enterprise, name: 'Second Distributor') }
     let(:distributor3) { create(:distributor_enterprise, name: 'Third Distributor') }
@@ -142,7 +145,7 @@ feature '
     before(:each) do
       enterprise_user.enterprise_roles.build(enterprise: distributor1).save
       enterprise_user.enterprise_roles.build(enterprise: distributor2).save
-      quick_login_as enterprise_user
+      login_as enterprise_user
     end
 
     it "I can get to the new enterprise page" do
@@ -158,6 +161,8 @@ feature '
     it "creates payment methods" do
       visit spree.new_admin_payment_method_path
       fill_in 'payment_method_name', with: 'Cheque payment method'
+      expect(page).to have_field 'payment_method_description'
+      expect(page).to have_select 'payment_method_display_on'
 
       check "payment_method_distributor_ids_#{distributor1.id}"
       find(:css, "tags-input .tags input").set "local\n"
@@ -166,7 +171,7 @@ feature '
       expect(flash_message).to eq('Payment Method has been successfully created!')
       expect(first('tags-input .tag-list ti-tag-item')).to have_content "local"
 
-      payment_method = Spree::PaymentMethod.find_by_name('Cheque payment method')
+      payment_method = Spree::PaymentMethod.find_by(name: 'Cheque payment method')
       expect(payment_method.distributors).to eq([distributor1])
       expect(payment_method.tag_list).to eq(["local"])
     end

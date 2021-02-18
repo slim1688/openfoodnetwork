@@ -5,15 +5,13 @@ module Api
     skip_authorization_check only: [:index, :show, :jstree]
 
     def index
-      if taxonomy
-        @taxons = taxonomy.root.children
-      else
-        if params[:ids]
-          @taxons = Spree::Taxon.where(id: params[:ids].split(","))
-        else
-          @taxons = Spree::Taxon.ransack(params[:q]).result
-        end
-      end
+      @taxons = if taxonomy
+                  taxonomy.root.children
+                elsif params[:ids]
+                  Spree::Taxon.where(id: params[:ids].split(","))
+                else
+                  Spree::Taxon.ransack(params[:q]).result
+                end
       render json: @taxons, each_serializer: Api::TaxonSerializer
     end
 
@@ -24,9 +22,9 @@ module Api
 
     def create
       authorize! :create, Spree::Taxon
-      @taxon = Spree::Taxon.new(params[:taxon])
+      @taxon = Spree::Taxon.new(taxon_params)
       @taxon.taxonomy_id = params[:taxonomy_id]
-      taxonomy = Spree::Taxonomy.find_by_id(params[:taxonomy_id])
+      taxonomy = Spree::Taxonomy.find_by(id: params[:taxonomy_id])
 
       if taxonomy.nil?
         @taxon.errors[:taxonomy_id] = I18n.t(:invalid_taxonomy_id, scope: 'spree.api')
@@ -44,7 +42,7 @@ module Api
 
     def update
       authorize! :update, Spree::Taxon
-      if taxon.update_attributes(params[:taxon])
+      if taxon.update(taxon_params)
         render json: taxon, serializer: Api::TaxonSerializer, status: :ok
       else
         invalid_resource!(taxon)
@@ -67,6 +65,12 @@ module Api
 
     def taxon
       @taxon ||= taxonomy.taxons.find(params[:id])
+    end
+
+    def taxon_params
+      return if params[:taxon].blank?
+
+      params.require(:taxon).permit([:name, :parent_id])
     end
   end
 end

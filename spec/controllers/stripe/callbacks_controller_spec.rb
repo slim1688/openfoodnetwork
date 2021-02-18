@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Stripe::CallbacksController, type: :controller do
@@ -30,7 +32,7 @@ describe Stripe::CallbacksController, type: :controller do
 
       it "redirects to unauthorized" do
         spree_get :index, params
-        expect(response).to redirect_to spree.unauthorized_path
+        expect(response).to redirect_to unauthorized_path
       end
     end
 

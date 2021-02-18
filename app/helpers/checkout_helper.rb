@@ -7,6 +7,8 @@ module CheckoutHelper
     adjustments = order.adjustments.eligible
     exclude = opts[:exclude] || {}
 
+    adjustments = adjustments.to_a
+
     # Remove empty tax adjustments and (optionally) shipping fees
     adjustments.reject! { |a| a.originator_type == 'Spree::TaxRate' && a.amount == 0 }
     adjustments.reject! { |a| a.originator_type == 'Spree::ShippingMethod' } if exclude.include? :shipping
@@ -16,7 +18,9 @@ module CheckoutHelper
     enterprise_fee_adjustments = adjustments.select { |a| a.originator_type == 'EnterpriseFee' && a.source_type != 'Spree::LineItem' }
     adjustments.reject! { |a| a.originator_type == 'EnterpriseFee' && a.source_type != 'Spree::LineItem' }
     unless exclude.include? :admin_and_handling
-      adjustments << Spree::Adjustment.new(label: I18n.t(:orders_form_admin), amount: enterprise_fee_adjustments.sum(&:amount))
+      adjustments << Spree::Adjustment.new(
+        label: I18n.t(:orders_form_admin), amount: enterprise_fee_adjustments.sum(&:amount)
+      )
     end
 
     adjustments
@@ -24,7 +28,7 @@ module CheckoutHelper
 
   def display_checkout_admin_and_handling_adjustments_total_for(order)
     adjustments = order.adjustments.eligible.where('originator_type = ? AND source_type != ? ', 'EnterpriseFee', 'Spree::LineItem')
-    Spree::Money.new adjustments.sum(&:amount), currency: order.currency
+    Spree::Money.new adjustments.sum(:amount), currency: order.currency
   end
 
   def checkout_line_item_adjustments(order)
@@ -32,7 +36,7 @@ module CheckoutHelper
   end
 
   def checkout_subtotal(order)
-    order.item_total + checkout_line_item_adjustments(order).sum(&:amount)
+    order.item_total + checkout_line_item_adjustments(order).sum(:amount)
   end
 
   def display_checkout_subtotal(order)
@@ -44,8 +48,11 @@ module CheckoutHelper
   end
 
   def display_checkout_taxes_hash(order)
-    order.tax_adjustment_totals.each_with_object({}) do |(tax_rate, tax_amount), hash|
-      hash[number_to_percentage(tax_rate.amount * 100, precision: 1)] = Spree::Money.new tax_amount, currency: order.currency
+    totals = OrderTaxAdjustmentsFetcher.new(order).totals
+
+    totals.each_with_object({}) do |(tax_rate, tax_amount), hash|
+      hash[number_to_percentage(tax_rate.amount * 100, precision: 1)] =
+        Spree::Money.new tax_amount, currency: order.currency
     end
   end
 

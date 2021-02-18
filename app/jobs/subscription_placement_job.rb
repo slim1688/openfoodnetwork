@@ -1,6 +1,6 @@
 require 'order_management/subscriptions/summarizer'
 
-class SubscriptionPlacementJob
+class SubscriptionPlacementJob < ActiveJob::Base
   def perform
     ids = proxy_orders.pluck(:id)
     proxy_orders.update_all(placed_at: Time.zone.now)
@@ -28,9 +28,15 @@ class SubscriptionPlacementJob
   end
 
   def place_order_for(proxy_order)
-    Rails.logger.info "Placing Order for Proxy Order #{proxy_order.id}"
-    proxy_order.initialise_order!
+    JobLogger.logger.info("Placing Order for Proxy Order #{proxy_order.id}")
+    initialise_order(proxy_order)
     place_order(proxy_order.order)
+  end
+
+  def initialise_order(proxy_order)
+    proxy_order.initialise_order!
+  rescue StandardError => e
+    Bugsnag.notify(e, subscription: proxy_order.subscription, proxy_order: proxy_order)
   end
 
   def place_order(order)
@@ -42,8 +48,9 @@ class SubscriptionPlacementJob
 
     move_to_completion(order)
     send_placement_email(order, changes)
-  rescue StateMachine::InvalidTransition
-    record_and_log_error(:processing, order)
+  rescue StandardError => e
+    record_and_log_error(:processing, order, e.message)
+    Bugsnag.notify(e, order: order)
   end
 
   def cap_quantity_and_store_changes(order)
@@ -54,7 +61,7 @@ class SubscriptionPlacementJob
     end
     unavailable_stock_lines_for(order).each do |line_item|
       changes[line_item.id] = changes[line_item.id] || line_item.quantity
-      line_item.update_attributes(quantity: 0)
+      line_item.update(quantity: 0)
     end
     changes
   end
@@ -66,7 +73,7 @@ class SubscriptionPlacementJob
   end
 
   def move_to_completion(order)
-    AdvanceOrderService.new(order).call!
+    OrderWorkflow.new(order).complete!
   end
 
   def unavailable_stock_lines_for(order)
@@ -80,11 +87,11 @@ class SubscriptionPlacementJob
   def send_placement_email(order, changes)
     record_issue(:changes, order) if changes.present?
     record_success(order) if changes.blank?
-    SubscriptionMailer.placement_email(order, changes).deliver
+    SubscriptionMailer.placement_email(order, changes).deliver_now
   end
 
   def send_empty_email(order, changes)
     record_issue(:empty, order)
-    SubscriptionMailer.empty_email(order, changes).deliver
+    SubscriptionMailer.empty_email(order, changes).deliver_now
   end
 end

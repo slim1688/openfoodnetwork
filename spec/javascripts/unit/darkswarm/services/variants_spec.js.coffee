@@ -35,9 +35,6 @@ describe 'Variants service', ->
       it "initialises the total_price", ->
         expect(Variants.register(variant).line_item.total_price).toEqual 400
 
-  it "initialises base price percentage", ->
-    expect(Variants.register(variant).base_price_percentage).toEqual 81
-
   it "clears registered variants", ->
     Variants.register(variant)
     expect(Variants.variants[variant.id]).toBe variant
@@ -49,25 +46,9 @@ describe 'Variants service', ->
       variant = {product_name: 'product_name', name_to_display: 'product_name'}
       expect(Variants.extendedVariantName(variant)).toEqual "product_name"
 
-    it "includes the options text even if variant name is same as product", ->
-      variant =
-        product_name: 'product_name'
-        name_to_display: 'product_name'
-        options_text: 'options_text'
-
-      expect(Variants.extendedVariantName(variant)).toEqual "product_name (options_text)"
-
     describe "when the product name and the variant name differ", ->
       it "returns a combined name when there is no options text", ->
         variant =
           product_name: 'product_name'
           name_to_display: 'name_to_display'
         expect(Variants.extendedVariantName(variant)).toEqual "product_name - name_to_display"
-
-      it "returns a combined name when there is some options text", ->
-        variant =
-          product_name: 'product_name'
-          name_to_display: 'name_to_display'
-          options_text: 'options_text'
-
-        expect(Variants.extendedVariantName(variant)).toEqual "product_name - name_to_display (options_text)"

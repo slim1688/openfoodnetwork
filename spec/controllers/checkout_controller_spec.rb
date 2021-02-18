@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe CheckoutController, type: :controller do
   let(:distributor) { create(:distributor_enterprise, with_payment_and_shipping: true) }
   let(:order_cycle) { create(:simple_order_cycle) }
   let(:order) { create(:order) }
-  let(:reset_order_service) { double(ResetOrderService) }
+  let(:reset_order_service) { double(OrderCompletionReset) }
 
   before do
     allow(order).to receive(:checkout_allowed?).and_return true
@@ -33,7 +35,7 @@ describe CheckoutController, type: :controller do
     get :edit
 
     expect(response).to redirect_to root_url
-    expect(flash[:info]).to eq("The hub you have selected is temporarily closed for orders. Please try again later.")
+    expect(flash[:info]).to eq(I18n.t('order_cycles_closed_for_hub'))
   end
 
   describe "redirection to cart and stripe" do
@@ -67,10 +69,31 @@ describe CheckoutController, type: :controller do
         allow(order).to receive_message_chain(:insufficient_stock_lines, :empty?).and_return true
       end
 
-      it "does not redirect" do
-        expect(order_cycle_distributed_variants).to receive(:distributes_order_variants?).with(order).and_return(true)
-        get :edit
-        expect(response).to be_success
+      describe "order variants are distributed in the OC" do
+        before do
+          expect(order_cycle_distributed_variants).to receive(:distributes_order_variants?).with(order).and_return(true)
+        end
+
+        it "does not redirect" do
+          get :edit
+          expect(response).to be_success
+        end
+
+        it "returns a specific flash message when Spree::Core::GatewayError occurs" do
+          order_checkout_restart = double(:order_checkout_restart)
+          allow(OrderCheckoutRestart).to receive(:new) { order_checkout_restart }
+          call_count = 0
+          allow(order_checkout_restart).to receive(:call) do
+            call_count += 1
+            raise Spree::Core::GatewayError, "Gateway blow up" if call_count == 1
+          end
+
+          spree_post :edit
+
+          expect(response.status).to eq(200)
+          flash_message = I18n.t(:spree_gateway_error_flash_for_checkout, error: "Gateway blow up")
+          expect(flash[:error]).to eq flash_message
+        end
       end
 
       describe "when the order is in payment state and a stripe payment intent is provided" do
@@ -87,7 +110,7 @@ describe CheckoutController, type: :controller do
         it "completes the order and redirects to the order confirmation page" do
           get :edit, { payment_intent: "pi_123" }
           expect(order.completed?).to be true
-          expect(response).to redirect_to spree.order_path(order)
+          expect(response).to redirect_to order_path(order)
         end
       end
     end
@@ -102,13 +125,13 @@ describe CheckoutController, type: :controller do
 
     it "set shipping_address_from_distributor when re-rendering edit" do
       expect(order.updater).to receive(:shipping_address_from_distributor)
-      allow(order).to receive(:update_attributes).and_return false
+      allow(order).to receive(:update).and_return false
       spree_post :update, format: :json, order: {}
     end
 
     it "set shipping_address_from_distributor when the order state cannot be advanced" do
       expect(order.updater).to receive(:shipping_address_from_distributor)
-      allow(order).to receive(:update_attributes).and_return true
+      allow(order).to receive(:update).and_return true
       allow(order).to receive(:next).and_return false
       spree_post :update, format: :json, order: {}
     end
@@ -117,10 +140,10 @@ describe CheckoutController, type: :controller do
       let(:test_shipping_method_id) { "111" }
 
       before do
-        # stub order and resetorderservice
-        allow(ResetOrderService).to receive(:new).with(controller, order) { reset_order_service }
+        # stub order and OrderCompletionReset
+        allow(OrderCompletionReset).to receive(:new).with(controller, order) { reset_order_service }
         allow(reset_order_service).to receive(:call)
-        allow(order).to receive(:update_attributes).and_return true
+        allow(order).to receive(:update).and_return true
         allow(controller).to receive(:current_order).and_return order
 
         # make order workflow pass through delivery
@@ -139,7 +162,7 @@ describe CheckoutController, type: :controller do
       end
 
       it "does not send shipping_method_id to the order model as an attribute" do
-        expect(order).to receive(:update_attributes).with({})
+        expect(order).to receive(:update).with({})
         spree_post :update, order: { shipping_method_id: test_shipping_method_id }
       end
 
@@ -153,7 +176,7 @@ describe CheckoutController, type: :controller do
       before do
         order.state = 'complete'
         order.save!
-        allow(order).to receive(:update_attributes).and_return(true)
+        allow(order).to receive(:update).and_return(true)
         allow(order).to receive(:next).and_return(true)
         allow(order).to receive(:set_distributor!).and_return(true)
       end
@@ -204,38 +227,47 @@ describe CheckoutController, type: :controller do
     end
 
     it "returns errors and flash if order.next fails" do
-      allow(order).to receive(:update_attributes).and_return true
+      allow(order).to receive(:update).and_return true
       allow(order).to receive(:next).and_return false
       spree_post :update, format: :json, order: {}
       expect(response.body).to eq({ errors: assigns[:order].errors, flash: { error: "Payment could not be processed, please check the details you entered" } }.to_json)
     end
 
     it "returns order confirmation url on success" do
-      allow(ResetOrderService).to receive(:new).with(controller, order) { reset_order_service }
+      allow(OrderCompletionReset).to receive(:new).with(controller, order) { reset_order_service }
       expect(reset_order_service).to receive(:call)
 
-      allow(order).to receive(:update_attributes).and_return true
+      allow(order).to receive(:update).and_return true
       allow(order).to receive(:state).and_return "complete"
 
       spree_post :update, format: :json, order: {}
       expect(response.status).to eq(200)
-      expect(response.body).to eq({ path: spree.order_path(order) }.to_json)
+      expect(response.body).to eq({ path: order_path(order) }.to_json)
     end
 
     it "returns an error on unexpected failure" do
-      allow(order).to receive(:update_attributes).and_raise
+      allow(order).to receive(:update).and_raise
 
       spree_post :update, format: :json, order: {}
       expect(response.status).to eq(400)
-      expect(response.body).to eq({ errors: {}, flash: {error: I18n.t("checkout.failed")} }.to_json)
+      expect(response.body).to eq({ errors: {}, flash: { error: I18n.t("checkout.failed") } }.to_json)
+    end
+
+    it "returns a specific error on Spree::Core::GatewayError" do
+      allow(order).to receive(:update).and_raise(Spree::Core::GatewayError.new("Gateway blow up"))
+      spree_post :update, format: :json, order: {}
+
+      expect(response.status).to eq(400)
+      flash_message = I18n.t(:spree_gateway_error_flash_for_checkout, error: "Gateway blow up")
+      expect(json_response["flash"]["error"]).to eq flash_message
     end
 
     describe "stale object handling" do
       it "retries when a stale object error is encountered" do
-        allow(ResetOrderService).to receive(:new).with(controller, order) { reset_order_service }
+        allow(OrderCompletionReset).to receive(:new).with(controller, order) { reset_order_service }
         expect(reset_order_service).to receive(:call)
 
-        allow(order).to receive(:update_attributes).and_return true
+        allow(order).to receive(:update).and_return true
         allow(controller).to receive(:state_callback)
 
         # The first time, raise a StaleObjectError. The second time, succeed.
@@ -251,7 +283,7 @@ describe CheckoutController, type: :controller do
       end
 
       it "tries a maximum of 3 times before giving up and returning an error" do
-        allow(order).to receive(:update_attributes).and_return true
+        allow(order).to receive(:update).and_return true
         allow(order).to receive(:next) { raise ActiveRecord::StaleObjectError.new(Spree::Variant.new, 'update') }
 
         spree_post :update, format: :json, order: {}
@@ -265,7 +297,7 @@ describe CheckoutController, type: :controller do
       allow(controller).to receive(:current_distributor) { distributor }
       allow(controller).to receive(:current_order_cycle) { order_cycle }
       allow(controller).to receive(:current_order) { order }
-      allow(order).to receive(:update_attributes) { true }
+      allow(order).to receive(:update) { true }
       allow(order).to receive(:state) { "payment" }
     end
 
@@ -298,12 +330,12 @@ describe CheckoutController, type: :controller do
     end
   end
 
-  describe "#update_failed" do
-    let(:restart_checkout) { instance_double(RestartCheckout, call: true) }
+  describe "#action_failed" do
+    let(:restart_checkout) { instance_double(OrderCheckoutRestart, call: true) }
 
     before do
       controller.instance_variable_set(:@order, order)
-      allow(RestartCheckout).to receive(:new) { restart_checkout }
+      allow(OrderCheckoutRestart).to receive(:new) { restart_checkout }
       allow(controller).to receive(:current_order) { order }
     end
 
@@ -312,7 +344,7 @@ describe CheckoutController, type: :controller do
       expect(restart_checkout).to receive(:call)
       expect(controller).to receive(:respond_to)
 
-      controller.send(:update_failed)
+      controller.send(:action_failed)
     end
   end
 end

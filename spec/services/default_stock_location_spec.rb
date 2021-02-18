@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe DefaultStockLocation do
@@ -8,13 +10,13 @@ describe DefaultStockLocation do
     end
 
     it 'sets the location in the default country' do
-      default_country = Spree::Country.find_by_iso(ENV['DEFAULT_COUNTRY_CODE'])
+      default_country = Spree::Country.find_by(iso: ENV['DEFAULT_COUNTRY_CODE'])
       stock_location = described_class.create!
       expect(stock_location.country).to eq(default_country)
     end
 
     it 'sets the first state in the country' do
-      default_country = Spree::Country.find_by_iso(ENV['DEFAULT_COUNTRY_CODE'])
+      default_country = Spree::Country.find_by(iso: ENV['DEFAULT_COUNTRY_CODE'])
       stock_location = described_class.create!
       expect(stock_location.state).to eq(default_country.states.first)
     end
@@ -22,7 +24,7 @@ describe DefaultStockLocation do
 
   describe '.destroy_all' do
     it "removes all stock locations named 'default'" do
-      create(:stock_location, name: 'default')
+      create(:stock_location)
 
       expect { described_class.destroy_all }
         .to change { Spree::StockLocation.count }.to(0)
@@ -33,7 +35,7 @@ describe DefaultStockLocation do
     context 'when a location named default already exists' do
       let!(:location) do
         country = create(:country)
-        state = create(:state, country: country)
+        state = Spree::State.create(name: 'Alabama', country: country)
         Spree::StockLocation.create!(
           name: 'default',
           country_id: country.id,

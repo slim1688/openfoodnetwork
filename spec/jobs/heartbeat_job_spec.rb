@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe HeartbeatJob do
@@ -20,7 +22,7 @@ describe HeartbeatJob do
 
   def run_job
     clear_jobs
-    Delayed::Job.enqueue HeartbeatJob.new
+    HeartbeatJob.perform_now
     flush_jobs ignore_exceptions: false
   end
 end

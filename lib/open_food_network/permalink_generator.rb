@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Finds a unique permalink for a new or updated record.
 # It considers soft-deleted records which are ignored by Spree.
 # Spree's work:
@@ -40,7 +42,7 @@ module PermalinkGenerator
     if self.class.respond_to?(:with_deleted)
       self.class.with_deleted
     else
-      self.class.scoped
+      self.class.where(nil)
     end
   end
 end

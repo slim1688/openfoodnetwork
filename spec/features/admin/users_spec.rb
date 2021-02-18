@@ -1,13 +1,15 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 feature "Managing users" do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include OpenFoodNetwork::EmailHelper
 
   context "as super-admin" do
     before do
       setup_email
-      quick_login_as_admin
+      login_as_admin
     end
 
     context "from the index page" do
@@ -73,7 +75,7 @@ feature "Managing users" do
         end
 
         it "should allow to generate, regenarate and clear the user api key", js: true do
-          user = Spree::User.find_by_email("a@example.com")
+          user = Spree::User.find_by(email: "a@example.com")
           expect(page).to have_content "NO KEY"
 
           click_button "Generate API key"
@@ -124,7 +126,7 @@ feature "Managing users" do
           # The `a` element doesn't have an href, so we can't use click_link.
           find("a", text: "Resend").click
           expect(page).to have_text "Resend done"
-        end.to send_confirmation_instructions
+        end.to enqueue_job ActionMailer::DeliveryJob
       end
     end
   end

@@ -1,17 +1,18 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe UserConfirmationsController, type: :controller do
-  include AuthenticationWorkflow
   include OpenFoodNetwork::EmailHelper
 
-  let!(:user) { create_enterprise_user }
-  let!(:confirmed_user) { create_enterprise_user(confirmed_at: nil) }
-  let!(:unconfirmed_user) { create_enterprise_user(confirmed_at: nil) }
+  let!(:user) { create(:user) }
+  let!(:confirmed_user) { create(:user, confirmed_at: nil) }
+  let!(:unconfirmed_user) { create(:user, confirmed_at: nil) }
   let!(:confirmed_token) { confirmed_user.confirmation_token }
 
   before do
     @request.env["devise.mapping"] = Devise.mappings[:spree_user]
-    confirmed_user.confirm!
+    confirmed_user.confirm
   end
 
   context "confirming a user" do
@@ -52,7 +53,8 @@ describe UserConfirmationsController, type: :controller do
         unconfirmed_user.reset_password_token = Devise.friendly_token
         unconfirmed_user.save!
         spree_get :show, confirmation_token: unconfirmed_user.confirmation_token
-        expect(response).to redirect_to spree.edit_spree_user_password_path(reset_password_token: unconfirmed_user.reset_password_token)
+        expect(response).to be_redirect
+        expect(response.body).to include spree.edit_spree_user_password_path
       end
     end
   end
@@ -70,7 +72,9 @@ describe UserConfirmationsController, type: :controller do
       performing_deliveries do
         expect do
           spree_post :create, spree_user: { email: unconfirmed_user.email }
-        end.to send_confirmation_instructions
+        end.to enqueue_job ActionMailer::DeliveryJob
+
+        expect(enqueued_jobs.last.to_s).to match "confirmation_instructions"
       end
     end
   end

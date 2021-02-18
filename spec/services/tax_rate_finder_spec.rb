@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe TaxRateFinder do
@@ -6,11 +8,10 @@ describe TaxRateFinder do
     let(:included_tax) { BigDecimal(20) }
     let(:tax_rate) { create_rate(0.2) }
     let(:tax_category) { create(:tax_category, tax_rates: [tax_rate]) }
-    # This zone is used by :order_with_taxes and needs to match it
-    let(:zone) { create(:zone, name: "GlobalZone") }
+    let(:zone) { create(:zone_with_member) }
     let(:shipment) { create(:shipment) }
     let(:enterprise_fee) { create(:enterprise_fee, tax_category: tax_category) }
-    let(:order) { create(:order_with_taxes) }
+    let(:order) { create(:order_with_taxes, zone: zone) }
 
     it "finds the tax rate of a shipping fee" do
       rates = TaxRateFinder.new.tax_rates(
@@ -66,7 +67,7 @@ describe TaxRateFinder do
       create(
         :tax_rate,
         amount: amount,
-        calculator: Spree::Calculator::DefaultTax.new,
+        calculator: Calculator::DefaultTax.new,
         zone: zone
       )
     end

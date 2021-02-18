@@ -1,12 +1,13 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe "Taxonomies" do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
+  include WebHelper
 
   before(:each) do
-    quick_login_as_admin
-    visit spree.admin_dashboard_path
-    click_link "Configuration"
+    login_as_admin_and_visit spree.edit_admin_general_settings_path
   end
 
   context "show" do
@@ -14,8 +15,10 @@ describe "Taxonomies" do
       create(:taxonomy, name: 'Brand')
       create(:taxonomy, name: 'Categories')
       click_link "Taxonomies"
-      within_row(1) { expect(page).to have_content("Brand") }
-      within_row(2) { expect(page).to have_content("Categories") }
+      within("table.index tbody") do
+        expect(page).to have_content("Brand")
+        expect(page).to have_content("Categories")
+      end
     end
   end
 
@@ -43,7 +46,7 @@ describe "Taxonomies" do
     it "should allow an admin to update an existing taxonomy" do
       create(:taxonomy)
       click_link "Taxonomies"
-      within_row(1) { click_icon :edit }
+      within_row(1) { find(".icon-edit").click }
       fill_in "taxonomy_name", with: "sports 99"
       click_button "Update"
       expect(page).to have_content("successfully updated!")

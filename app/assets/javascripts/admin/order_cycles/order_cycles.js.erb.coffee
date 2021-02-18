@@ -1,30 +1,13 @@
 angular.module('admin.orderCycles', ['ngTagsInput', 'admin.indexUtils', 'admin.enterprises'])
-
-  .config ($httpProvider) ->
-    $httpProvider.defaults.headers.common['X-CSRF-Token'] = $('meta[name=csrf-token]').attr('content')
-
   .directive 'datetimepicker', ($timeout, $parse) ->
     require: "ngModel"
     link: (scope, element, attrs, ngModel) ->
       $timeout ->
-        # using $parse instead of scope[attrs.datetimepicker] for cases
-        # where attrs.datetimepicker is 'foo.bar.lol'
-        $(element).datetimepicker
-          dateFormat: 'yy-mm-dd'
-          timeFormat: 'HH:mm'
-          showOn: 'button'
-          controlType: 'select'
-          oneLine: true
-          buttonImage: "<%= asset_path 'datepicker/cal.gif' %>"
-          buttonImageOnly: true
-          stepMinute: 15
-          onSelect: (dateText, inst) ->
-            scope.$apply(->
-              element.val(dateText)
-              parsed = $parse(attrs.datetimepicker)
-              parsed.assign(scope, dateText)
-            )
-
+        flatpickr(element,  Object.assign({},
+                            window.FLATPICKR_DATETIME_DEFAULT, {
+                            onOpen: (selectedDates, dateStr, instance) ->
+                              instance.setDate(ngModel.$modelValue)
+                            }));
 
   .directive 'ofnOnChange', ->
     (scope, element, attrs) ->

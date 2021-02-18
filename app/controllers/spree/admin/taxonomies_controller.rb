@@ -1,6 +1,6 @@
 module Spree
   module Admin
-    class TaxonomiesController < ResourceController
+    class TaxonomiesController < ::Admin::ResourceController
       respond_to :json, only: [:get_children]
 
       def get_children
@@ -11,10 +11,14 @@ module Spree
 
       def location_after_save
         if @taxonomy.created_at == @taxonomy.updated_at
-          edit_admin_taxonomy_url(@taxonomy)
+          spree.edit_admin_taxonomy_url(@taxonomy)
         else
-          admin_taxonomies_url
+          spree.admin_taxonomies_url
         end
+      end
+
+      def permitted_resource_params
+        params.require(:taxonomy).permit(:name)
       end
     end
   end

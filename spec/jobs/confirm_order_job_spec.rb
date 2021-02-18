@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe ConfirmOrderJob do
@@ -8,9 +10,9 @@ describe ConfirmOrderJob do
     shop_confirm_fake = double(:confirm_email_for_shop)
     expect(Spree::OrderMailer).to receive(:confirm_email_for_customer).and_return customer_confirm_fake
     expect(Spree::OrderMailer).to receive(:confirm_email_for_shop).and_return shop_confirm_fake
-    expect(customer_confirm_fake).to receive :deliver
-    expect(shop_confirm_fake).to receive :deliver
+    expect(customer_confirm_fake).to receive :deliver_now
+    expect(shop_confirm_fake).to receive :deliver_now
 
-    run_job ConfirmOrderJob.new order.id
+    ConfirmOrderJob.perform_now order.id
   end
 end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module WebHelper
   def self.included(base)
     base.extend ClassMethods
@@ -38,7 +40,7 @@ module WebHelper
 
   def select_by_value(value, options = {})
     from = options.delete :from
-    page.find_by_id(from).find("option[value='#{value}']").select_option
+    page.find_by(id: from).find("option[value='#{value}']").select_option
   end
 
   def flash_message
@@ -95,58 +97,33 @@ module WebHelper
     end
   end
 
-  def wait_until_enabled(selector)
-    wait_until(10) { first("#{selector}:not([disabled='disabled'])") }
+  def within_row(num, &block)
+    within("table.index tbody tr:nth-child(#{num})", &block)
   end
 
   def select2_select(value, options)
-    id = options[:from]
-    options[:from] = "#s2id_#{id}"
-    targetted_select2(value, options)
-  end
+    open_select2("#s2id_#{options[:from]}")
 
-  # Support having different texts to search for and to click in the select2
-  # field.
-  #
-  # This overrides the method in Spree.
-  def targetted_select2_search(value, options)
-    page.execute_script %{$('#{options[:from]}').select2('open')}
-    page.execute_script "$('#{options[:dropdown_css]} input.select2-input').val('#{value}').trigger('keyup-change');"
-    select_select2_result(options[:select_text] || value)
-  end
+    if options[:search]
+      page.find(:xpath, '//body')
+        .find(:css, '.select2-drop-active input.select2-input, .select2-dropdown-open input.select2-input')
+        .set(value)
+    end
 
-  def multi_select2_select(value, options)
-    find("#s2id_#{options[:from]}").find('ul li.select2-search-field').click
-    select_select2_result(value)
+    page.find(:xpath, '//body')
+      .find(:css, '.select2-drop-active .select2-result-label', text: options[:select_text] || value)
+      .click
+
+    expect(page).to have_select2 options[:from], selected: options[:select_text] || value
   end
 
   def open_select2(selector)
-    page.execute_script "jQuery('#{selector}').select2('open');"
+    page.find(selector).find(:css, '.select2-choice, .select2-search-field').click
   end
 
-  def close_select2(selector)
-    page.execute_script "jQuery('#{selector}').select2('close');"
-  end
-
-  def select2_search_async(value, options)
-    id = find_label_by_text(options[:from])
-    options[:from] = "#s2id_#{id}"
-    targetted_select2_search_async(value, options)
-  end
-
-  def targetted_select2_search_async(value, options)
-    page.execute_script %{$('#{options[:from]}').select2('open')}
-    page.execute_script "$('#{options[:dropdown_css]} input.select2-input').val('#{value}').trigger('keyup-change');"
-    select_select2_result_async(value)
-  end
-
-  def select_select2_result_async(value)
-    while page.has_selector? "div.select2-searching"
-      return if page.has_selector? "div.select2-no-results"
-
-      sleep 0.2
-    end
-    page.execute_script(%{$("div.select2-result-label:contains('#{value}')").mouseup()})
+  def close_select2
+    # A click outside the select2 container should close it
+    page.find(:css, 'body').click
   end
 
   def accept_js_alert
@@ -159,6 +136,13 @@ module WebHelper
 
   def request_monitor_finished(controller = nil)
     page.evaluate_script("#{angular_scope(controller)}.scope().RequestMonitor.loading == false")
+  end
+
+  def fill_in_tag(tag_name, selector = "tags-input .tags input")
+    expect(page).to have_selector selector
+    find(:css, selector).send_keys ""
+    find(:css, selector).set "#{tag_name}\n"
+    expect(page).to have_selector ".tag-list .tag-item span", text: tag_name
   end
 
   private

@@ -1,6 +1,6 @@
 module Spree
   module Admin
-    class BaseController < Spree::BaseController
+    class BaseController < ApplicationController
       ssl_required
 
       helper 'spree/admin/navigation'
@@ -8,9 +8,9 @@ module Spree
 
       include I18nHelper
 
-      before_filter :authorize_admin
-      before_filter :set_locale
-      before_filter :warn_invalid_order_cycles, if: :html_request?
+      before_action :authorize_admin
+      before_action :set_locale
+      before_action :warn_invalid_order_cycles, if: :html_request?
 
       # Warn the user when they have an active order cycle with hubs that are not ready
       # for checkout (ie. does not have valid shipping and payment methods).
@@ -24,7 +24,7 @@ module Spree
       # This is in Spree::Core::ControllerHelpers::Auth
       # But you can't easily reopen modules in Ruby
       def unauthorized
-        if try_spree_current_user
+        if spree_current_user
           flash[:error] = t(:authorization_failure)
           redirect_to '/unauthorized'
         else

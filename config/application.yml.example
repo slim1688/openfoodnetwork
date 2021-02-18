@@ -13,7 +13,7 @@ DEFAULT_COUNTRY_CODE: AU
 # Locale for translation.
 LOCALE: en
 # For multilingual - ENV doesn't have array so pass it as string with commas
-AVAILABLE_LOCALES: en,es,en-GB
+AVAILABLE_LOCALES: en,es
 # Spree zone.
 CHECKOUT_ZONE: Australia
 # Find currency codes at http://en.wikipedia.org/wiki/ISO_4217.
@@ -59,5 +59,12 @@ SMTP_PASSWORD: 'f00d'
 # STRIPE_INSTANCE_PUBLISHABLE_KEY: "pk_test_xxxx" # This can be a test key or a live key
 # STRIPE_CLIENT_ID: "ca_xxxx" # This can be a development ID or a production ID
 # STRIPE_ENDPOINT_SECRET: "whsec_xxxx"
+
+# Feature toggles
+#
+# Adding user emails separated by commas will enable them the use of certain features. See
+# config/initializers/feature_toggles.rb for details.
+#
+# BETA_TESTERS: ofn@example.com,superadmin@example.com
 
 MEMCACHED_VALUE_MAX_MEGABYTES: '4'

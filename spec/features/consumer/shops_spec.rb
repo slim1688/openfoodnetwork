@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature 'Shops', js: true do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include UIComponentHelper
   include WebHelper
 
@@ -13,10 +15,6 @@ feature 'Shops', js: true do
   let!(:order_cycle) { create(:simple_order_cycle, distributors: [distributor], coordinator: create(:distributor_enterprise)) }
   let!(:producer) { create(:supplier_enterprise) }
   let!(:er) { create(:enterprise_relationship, parent: distributor, child: producer) }
-
-  before :each do
-    use_api_as_unauthenticated_user
-  end
 
   before do
     producer.set_producer_property 'Organic', 'NASAA 12345'
@@ -110,13 +108,13 @@ feature 'Shops', js: true do
 
   describe "taxon badges" do
     let!(:closed_oc) { create(:closed_order_cycle, distributors: [shop], variants: [p_closed.variants.first]) }
-    let!(:p_closed) { create(:simple_product, taxons: [taxon_closed]) }
+    let!(:p_closed) { create(:simple_product, primary_taxon: taxon_closed, taxons: [taxon_closed]) }
     let(:shop) { create(:distributor_enterprise, with_payment_and_shipping: true) }
     let(:taxon_closed) { create(:taxon, name: 'Closed') }
 
     describe "open shops" do
       let!(:open_oc) { create(:open_order_cycle, distributors: [shop], variants: [p_open.variants.first]) }
-      let!(:p_open) { create(:simple_product, taxons: [taxon_open]) }
+      let!(:p_open) { create(:simple_product, primary_taxon: taxon_open, taxons: [taxon_open]) }
       let(:taxon_open) { create(:taxon, name: 'Open') }
 
       it "shows taxons for open order cycles only" do

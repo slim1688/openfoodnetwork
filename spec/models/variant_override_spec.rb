@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe VariantOverride do
@@ -32,15 +34,25 @@ describe VariantOverride do
         expect(VariantOverride.indexed(hub1)).to eq( variant => vo1 )
         expect(VariantOverride.indexed(hub2)).to eq( variant => vo2 )
       end
+
+      xit "does not include overrides for soft-deleted variants" do
+        variant.delete
+        expect(VariantOverride.indexed(hub1)).to eq( nil => vo1 )
+      end
     end
   end
 
   describe "validation" do
     describe "ensuring that on_demand and count_on_hand are compatible" do
-      let(:variant_override) {
-        build(:variant_override, hub: hub, variant: variant,
-                                 on_demand: on_demand, count_on_hand: count_on_hand)
-      }
+      let(:variant_override) do
+        build_stubbed(
+          :variant_override,
+          hub: build_stubbed(:distributor_enterprise),
+          variant: build_stubbed(:variant),
+          on_demand: on_demand,
+          count_on_hand: count_on_hand
+        )
+      end
 
       context "when using producer stock settings" do
         let(:on_demand) { nil }
@@ -49,7 +61,7 @@ describe VariantOverride do
           let(:count_on_hand) { nil }
 
           it "is valid" do
-            expect(variant_override.save).to be_truthy
+            expect(variant_override).to be_valid
           end
         end
 
@@ -57,7 +69,7 @@ describe VariantOverride do
           let(:count_on_hand) { 1 }
 
           it "is invalid" do
-            expect(variant_override.save).to be_falsey
+            expect(variant_override).not_to be_valid
             error_message = I18n.t("using_producer_stock_settings_but_count_on_hand_set",
                                    scope: [i18n_scope_for_error, "count_on_hand"])
             expect(variant_override.errors[:count_on_hand]).to eq([error_message])
@@ -72,7 +84,7 @@ describe VariantOverride do
           let(:count_on_hand) { nil }
 
           it "is valid" do
-            expect(variant_override.save).to be_truthy
+            expect(variant_override).to be_valid
           end
         end
 
@@ -80,7 +92,7 @@ describe VariantOverride do
           let(:count_on_hand) { 1 }
 
           it "is invalid" do
-            expect(variant_override.save).to be_falsey
+            expect(variant_override).not_to be_valid
             error_message = I18n.t("on_demand_but_count_on_hand_set",
                                    scope: [i18n_scope_for_error, "count_on_hand"])
             expect(variant_override.errors[:count_on_hand]).to eq([error_message])
@@ -95,7 +107,7 @@ describe VariantOverride do
           let(:count_on_hand) { nil }
 
           it "is invalid" do
-            expect(variant_override.save).to be_falsey
+            expect(variant_override).not_to be_valid
             error_message = I18n.t("limited_stock_but_no_count_on_hand",
                                    scope: [i18n_scope_for_error, "count_on_hand"])
             expect(variant_override.errors[:count_on_hand]).to eq([error_message])
@@ -106,7 +118,7 @@ describe VariantOverride do
           let(:count_on_hand) { 1 }
 
           it "is valid" do
-            expect(variant_override.save).to be_truthy
+            expect(variant_override).to be_valid
           end
         end
       end
@@ -134,7 +146,14 @@ describe VariantOverride do
   end
 
   describe "with price" do
-    let(:variant_override) { create(:variant_override, variant: variant, hub: hub, price: 12.34) }
+    let(:variant_override) do
+      build_stubbed(
+        :variant_override,
+        variant: build_stubbed(:variant),
+        hub: build_stubbed(:distributor_enterprise),
+        price: 12.34
+      )
+    end
 
     it "returns the numeric price" do
       expect(variant_override.price).to eq(12.34)
@@ -142,7 +161,15 @@ describe VariantOverride do
   end
 
   describe "with nil count on hand" do
-    let(:variant_override) { create(:variant_override, variant: variant, hub: hub, count_on_hand: nil, on_demand: true) }
+    let(:variant_override) do
+      build_stubbed(
+        :variant_override,
+        variant: build_stubbed(:variant),
+        hub: build_stubbed(:distributor_enterprise),
+        count_on_hand: nil,
+        on_demand: true
+      )
+    end
 
     describe "stock_overridden?" do
       it "returns false" do
@@ -159,7 +186,14 @@ describe VariantOverride do
   end
 
   describe "with count on hand" do
-    let(:variant_override) { create(:variant_override, variant: variant, hub: hub, count_on_hand: 12) }
+    let(:variant_override) do
+      build_stubbed(
+        :variant_override,
+        variant: build_stubbed(:variant),
+        hub: build_stubbed(:distributor_enterprise),
+        count_on_hand: 12
+      )
+    end
 
     it "returns the numeric count on hand" do
       expect(variant_override.count_on_hand).to eq(12)
@@ -172,6 +206,15 @@ describe VariantOverride do
     end
 
     describe "move_stock!" do
+      let(:variant_override) do
+        create(
+          :variant_override,
+          variant: variant,
+          hub: hub,
+          count_on_hand: 12
+        )
+      end
+
       it "does nothing for quantity zero" do
         variant_override.move_stock!(0)
         expect(variant_override.reload.count_on_hand).to eq(12)
@@ -191,12 +234,24 @@ describe VariantOverride do
 
   describe "checking default stock value is present" do
     it "returns true when a default stock level has been set" do
-      vo = create(:variant_override, variant: variant, hub: hub, count_on_hand: 12, default_stock: 20)
+      vo = build_stubbed(
+        :variant_override,
+        variant: build_stubbed(:variant),
+        hub: build_stubbed(:distributor_enterprise),
+        count_on_hand: 12,
+        default_stock: 20
+      )
       expect(vo.default_stock?).to be true
     end
 
     it "returns false when the override has no default stock level" do
-      vo = create(:variant_override, variant: variant, hub: hub, count_on_hand: 12, default_stock: nil)
+      vo = build_stubbed(
+        :variant_override,
+        variant: build_stubbed(:variant),
+        hub: build_stubbed(:distributor_enterprise),
+        count_on_hand: 12,
+        default_stock: nil
+      )
       expect(vo.default_stock?).to be false
     end
   end

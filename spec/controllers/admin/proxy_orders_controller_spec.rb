@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Admin::ProxyOrdersController, type: :controller do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
 
   describe 'cancel' do
     let!(:user) { create(:user, enterprise_limit: 10) }
@@ -20,27 +22,27 @@ describe Admin::ProxyOrdersController, type: :controller do
       context 'as a regular user' do
         it 'redirects to unauthorized' do
           spree_put :cancel, params
-          expect(response).to redirect_to spree.unauthorized_path
+          expect(response).to redirect_to unauthorized_path
         end
       end
 
       context 'as an enterprise user' do
         context "without authorisation" do
           let!(:shop2) { create(:distributor_enterprise) }
-          before { shop2.update_attributes(owner: user) }
+          before { shop2.update(owner: user) }
 
           it 'redirects to unauthorized' do
             spree_put :cancel, params
-            expect(response).to redirect_to spree.unauthorized_path
+            expect(response).to redirect_to unauthorized_path
           end
         end
 
         context "with authorisation" do
-          before { shop.update_attributes(owner: user) }
+          before { shop.update(owner: user) }
 
           context "when cancellation succeeds" do
             it 'renders the cancelled proxy_order as json' do
-              spree_get :cancel, params
+              get :cancel, params
               json_response = JSON.parse(response.body)
               expect(json_response['state']).to eq "canceled"
               expect(json_response['id']).to eq proxy_order.id
@@ -49,10 +51,10 @@ describe Admin::ProxyOrdersController, type: :controller do
           end
 
           context "when cancellation fails" do
-            before { order_cycle.update_attributes(orders_close_at: 1.day.ago) }
+            before { order_cycle.update(orders_close_at: 1.day.ago) }
 
             it "shows an error" do
-              spree_get :cancel, params
+              get :cancel, params
               json_response = JSON.parse(response.body)
               expect(json_response['errors']).to eq ['Could not cancel the order']
             end
@@ -76,8 +78,8 @@ describe Admin::ProxyOrdersController, type: :controller do
 
     before do
       # Processing order to completion
-      allow(Spree::OrderMailer).to receive(:cancel_email) { double(:email, deliver: true) }
-      AdvanceOrderService.new(order).call!
+      allow(Spree::OrderMailer).to receive(:cancel_email) { double(:email, deliver_later: true) }
+      OrderWorkflow.new(order).complete!
       proxy_order.reload
       proxy_order.cancel
       allow(controller).to receive(:spree_current_user) { user }
@@ -89,27 +91,27 @@ describe Admin::ProxyOrdersController, type: :controller do
       context 'as a regular user' do
         it 'redirects to unauthorized' do
           spree_put :resume, params
-          expect(response).to redirect_to spree.unauthorized_path
+          expect(response).to redirect_to unauthorized_path
         end
       end
 
       context 'as an enterprise user' do
         context "without authorisation" do
           let!(:shop2) { create(:distributor_enterprise) }
-          before { shop2.update_attributes(owner: user) }
+          before { shop2.update(owner: user) }
 
           it 'redirects to unauthorized' do
             spree_put :resume, params
-            expect(response).to redirect_to spree.unauthorized_path
+            expect(response).to redirect_to unauthorized_path
           end
         end
 
         context "with authorisation" do
-          before { shop.update_attributes(owner: user) }
+          before { shop.update(owner: user) }
 
           context "when resuming succeeds" do
             it 'renders the resumed proxy_order as json' do
-              spree_get :resume, params
+              get :resume, params
               json_response = JSON.parse(response.body)
               expect(json_response['state']).to eq "resumed"
               expect(json_response['id']).to eq proxy_order.id
@@ -118,10 +120,10 @@ describe Admin::ProxyOrdersController, type: :controller do
           end
 
           context "when resuming fails" do
-            before { order_cycle.update_attributes(orders_close_at: 1.day.ago) }
+            before { order_cycle.update(orders_close_at: 1.day.ago) }
 
             it "shows an error" do
-              spree_get :resume, params
+              get :resume, params
               json_response = JSON.parse(response.body)
               expect(json_response['errors']).to eq ['Could not resume the order']
             end

@@ -3,6 +3,9 @@ require_relative 'boot'
 require 'rails/all'
 require_relative "../lib/open_food_network/i18n_config"
 
+require_relative '../lib/spree/core/environment'
+require_relative '../lib/spree/core/mail_interceptor'
+
 if defined?(Bundler)
   # If you precompile assets before deploying to production, use this line
   Bundler.require(*Rails.groups(:assets => %w(development test)))
@@ -18,11 +21,49 @@ module Openfoodnetwork
       Dir.glob(File.join(File.dirname(__FILE__), "../app/**/*_decorator*.rb")) do |c|
         Rails.configuration.cache_classes ? require(c) : load(c)
       end
+    end
 
-      # Load application's view overrides
-      Dir.glob(File.join(File.dirname(__FILE__), "../app/overrides/*.rb")) do |c|
-        Rails.configuration.cache_classes ? require(c) : load(c)
-      end
+    config.after_initialize do
+      # We need this here because the test env file loads before the Spree engine is loaded
+      Spree::Core::Engine.routes.default_url_options[:host] = 'test.host' if Rails.env == 'test'
+    end
+
+    # We reload the routes here
+    #   so that the appended/prepended routes are available to the application.
+    config.after_initialize do
+      Rails.application.routes_reloader.reload!
+    end
+
+    initializer "spree.environment", before: :load_config_initializers do |app|
+      app.config.spree = Spree::Core::Environment.new
+      Spree::Config = app.config.spree.preferences # legacy access
+    end
+
+    initializer "spree.load_preferences", before: "spree.environment" do
+      ::ActiveRecord::Base.include Spree::Preferences::Preferable
+    end
+
+    initializer "spree.register.payment_methods" do |app|
+      app.config.spree.payment_methods = [
+        Spree::Gateway::Bogus,
+        Spree::Gateway::BogusSimple,
+        Spree::PaymentMethod::Check
+      ]
+    end
+
+    initializer "spree.mail.settings" do |_app|
+      Spree::Core::MailSettings.init
+      Mail.register_interceptor(Spree::Core::MailInterceptor)
+    end
+
+    # filter sensitive information during logging
+    initializer "spree.params.filter" do |app|
+      app.config.filter_parameters += [
+        :password,
+        :password_confirmation,
+        :number,
+        :verification_value
+      ]
     end
 
     # Settings dependent on locale
@@ -39,7 +80,7 @@ module Openfoodnetwork
       Spree::Config['checkout_zone'] = ENV['CHECKOUT_ZONE']
       Spree::Config['currency'] = ENV['CURRENCY']
       if Spree::Country.table_exists?
-        country = Spree::Country.find_by_iso(ENV['DEFAULT_COUNTRY_CODE'])
+        country = Spree::Country.find_by(iso: ENV['DEFAULT_COUNTRY_CODE'])
         Spree::Config['default_country_id'] = country.id if country.present?
       else
         Spree::Config['default_country_id'] = 12  # Australia
@@ -49,50 +90,44 @@ module Openfoodnetwork
     # Register Spree calculators
     initializer 'spree.register.calculators' do |app|
       app.config.spree.calculators.shipping_methods = [
-        Spree::Calculator::FlatPercentItemTotal,
-        Spree::Calculator::FlatRate,
-        Spree::Calculator::FlexiRate,
-        Spree::Calculator::PerItem,
-        Spree::Calculator::PriceSack,
+        Calculator::FlatPercentItemTotal,
+        Calculator::FlatRate,
+        Calculator::FlexiRate,
+        Calculator::PerItem,
+        Calculator::PriceSack,
         Calculator::Weight
       ]
 
       app.config.spree.calculators.add_class('enterprise_fees')
       config.spree.calculators.enterprise_fees = [
         Calculator::FlatPercentPerItem,
-        Spree::Calculator::FlatRate,
-        Spree::Calculator::FlexiRate,
-        Spree::Calculator::PerItem,
-        Spree::Calculator::PriceSack,
+        Calculator::FlatRate,
+        Calculator::FlexiRate,
+        Calculator::PerItem,
+        Calculator::PriceSack,
         Calculator::Weight
       ]
+
       app.config.spree.calculators.add_class('payment_methods')
       config.spree.calculators.payment_methods = [
-        Spree::Calculator::FlatPercentItemTotal,
-        Spree::Calculator::FlatRate,
-        Spree::Calculator::FlexiRate,
-        Spree::Calculator::PerItem,
-        Spree::Calculator::PriceSack
+        Calculator::FlatPercentItemTotal,
+        Calculator::FlatRate,
+        Calculator::FlexiRate,
+        Calculator::PerItem,
+        Calculator::PriceSack
       ]
-    end
 
-    # Every splitter (except Base splitter) will split the order in multiple packages
-    #   Each package will generate a separate shipment in the order
-    #   Base splitter does not split the packages
-    #   So, because in OFN we have locked orders to have only one shipment,
-    #     we must use this splitter and no other
-    initializer "spree.register.stock_splitters" do |app|
-      app.config.spree.stock_splitters = [
-        Spree::Stock::Splitter::Base
+      app.config.spree.calculators.add_class('tax_rates')
+      config.spree.calculators.tax_rates = [
+        Calculator::DefaultTax
       ]
     end
 
     # Register Spree payment methods
     initializer "spree.gateway.payment_methods", :after => "spree.register.payment_methods" do |app|
-      app.config.spree.payment_methods << Spree::Gateway::Migs
-      app.config.spree.payment_methods << Spree::Gateway::Pin
       app.config.spree.payment_methods << Spree::Gateway::StripeConnect
       app.config.spree.payment_methods << Spree::Gateway::StripeSCA
+      app.config.spree.payment_methods << Spree::Gateway::PayPalExpress
     end
 
     # Settings in config/environments/* take precedence over those specified here.
@@ -106,7 +141,7 @@ module Openfoodnetwork
       #{config.root}/app/jobs
     )
 
-    config.paths["config/routes"] = %w(
+    config.paths["config/routes.rb"] = %w(
       config/routes/api.rb
       config/routes.rb
       config/routes/admin.rb
@@ -138,9 +173,6 @@ module Openfoodnetwork
     # Configure the default encoding used in templates for Ruby 1.9.
     config.encoding = "utf-8"
 
-    # Configure sensitive parameters which will be filtered from the log file.
-    config.filter_parameters += [:password]
-
     # Enable the asset pipeline
     config.assets.enabled = true
 
@@ -163,7 +195,12 @@ module Openfoodnetwork
     config.assets.precompile += ['mail/all.css']
     config.assets.precompile += ['shared/*']
     config.assets.precompile += ['qz/*']
+    config.assets.precompile += ['*.jpg', '*.jpeg', '*.png', '*.gif' '*.svg']
 
     config.active_support.escape_html_entities_in_json = true
+
+    config.active_job.queue_adapter = :delayed_job
+
+    config.active_record.raise_in_transactional_callbacks = true
   end
 end

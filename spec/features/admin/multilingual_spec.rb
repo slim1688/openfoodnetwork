@@ -1,21 +1,23 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature 'Multilingual', js: true do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include WebHelper
-  let(:admin_role) { Spree::Role.find_or_create_by_name!('admin') }
+  let(:admin_role) { Spree::Role.find_or_create_by!(name: 'admin') }
   let(:admin_user) { create(:user) }
 
   background do
     admin_user.spree_roles << admin_role
-    quick_login_as admin_user
+    login_as admin_user
     visit spree.admin_dashboard_path
   end
 
-  it 'has two locales available' do
+  it 'has three locales available' do
     expect(Rails.application.config.i18n[:default_locale]).to eq 'en'
     expect(Rails.application.config.i18n[:locale]).to eq 'en'
-    expect(Rails.application.config.i18n[:available_locales]).to eq ['en', 'es']
+    expect(Rails.application.config.i18n[:available_locales]).to eq ['en', 'es', 'pt']
   end
 
   it 'can switch language by params' do

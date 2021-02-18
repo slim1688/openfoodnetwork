@@ -1,17 +1,19 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Enterprise do
-  include AuthenticationWorkflow
-
   describe "sending emails" do
     describe "on creation" do
-      let!(:user) { create_enterprise_user( enterprise_limit: 2 ) }
+      let!(:user) { create(:user) }
       let!(:enterprise) { create(:enterprise, owner: user) }
 
       it "sends a welcome email" do
         expect do
           create(:enterprise, owner: user)
-        end.to enqueue_job WelcomeEnterpriseJob
+        end.to enqueue_job ActionMailer::DeliveryJob
+
+        expect(enqueued_jobs.last.to_s).to match "welcome"
       end
     end
   end
@@ -69,21 +71,23 @@ describe Enterprise do
       end
 
       it "scopes relatives to visible distributors" do
-        expect(e).to receive(:relatives_including_self).and_return(relatives = [])
+        enterprise = build_stubbed(:distributor_enterprise)
+        expect(enterprise).to receive(:relatives_including_self).and_return(relatives = [])
         expect(relatives).to receive(:is_distributor).and_return relatives
-        e.distributors
+        enterprise.distributors
       end
 
       it "scopes relatives to visible producers" do
-        expect(e).to receive(:relatives_including_self).and_return(relatives = [])
+        enterprise = build_stubbed(:distributor_enterprise)
+        expect(enterprise).to receive(:relatives_including_self).and_return(relatives = [])
         expect(relatives).to receive(:is_primary_producer).and_return relatives
-        e.suppliers
+        enterprise.suppliers
       end
     end
 
     describe "ownership" do
-      let(:u1) { create_enterprise_user }
-      let(:u2) { create_enterprise_user }
+      let(:u1) { create(:user) }
+      let(:u2) { create(:user) }
       let!(:e) { create(:enterprise, owner: u1 ) }
 
       it "adds new owner to list of managers" do
@@ -111,14 +115,16 @@ describe Enterprise do
   end
 
   describe "validations" do
-    subject { FactoryBot.create(:distributor_enterprise) }
     it { is_expected.to validate_presence_of(:name) }
-    it { is_expected.to validate_uniqueness_of(:permalink) }
+    it do
+      create(:distributor_enterprise)
+      is_expected.to validate_uniqueness_of(:permalink)
+    end
 
     it "requires an owner" do
-      expect{
-        e = create(:enterprise, owner: nil)
-      }.to raise_error ActiveRecord::RecordInvalid, "Validation failed: Owner can't be blank"
+      enterprise = build_stubbed(:enterprise, owner: nil)
+      expect(enterprise).not_to be_valid
+      expect(enterprise.errors[:owner].first).to eq "can't be blank"
     end
 
     describe "name uniqueness" do
@@ -509,10 +515,10 @@ describe Enterprise do
 
   describe "presentation of attributes" do
     let(:distributor) {
-      create(:distributor_enterprise,
-             website: "http://www.google.com",
-             facebook: "www.facebook.com/roger",
-             linkedin: "https://linkedin.com")
+      build_stubbed(:distributor_enterprise,
+                    website: "http://www.google.com",
+                    facebook: "www.facebook.com/roger",
+                    linkedin: "https://linkedin.com")
     }
 
     it "strips http from url fields" do
@@ -535,12 +541,12 @@ describe Enterprise do
   end
 
   describe "provide enterprise category" do
-    let(:producer_sell_all) { build(:enterprise, is_primary_producer: true,  sells: "any") }
-    let(:producer_sell_own) { build(:enterprise, is_primary_producer: true,  sells: "own") }
-    let(:producer_sell_none) { build(:enterprise, is_primary_producer: true, sells: "none") }
-    let(:non_producer_sell_all) { build(:enterprise, is_primary_producer: false,  sells: "any") }
-    let(:non_producer_sell_own) { build(:enterprise, is_primary_producer: false,  sells: "own") }
-    let(:non_producer_sell_none) { build(:enterprise, is_primary_producer: false, sells: "none") }
+    let(:producer_sell_all) { build_stubbed(:enterprise, is_primary_producer: true,  sells: "any") }
+    let(:producer_sell_own) { build_stubbed(:enterprise, is_primary_producer: true,  sells: "own") }
+    let(:producer_sell_none) { build_stubbed(:enterprise, is_primary_producer: true, sells: "none") }
+    let(:non_producer_sell_all) { build_stubbed(:enterprise, is_primary_producer: false,  sells: "any") }
+    let(:non_producer_sell_own) { build_stubbed(:enterprise, is_primary_producer: false,  sells: "own") }
+    let(:non_producer_sell_none) { build_stubbed(:enterprise, is_primary_producer: false, sells: "none") }
 
     it "should output enterprise categories" do
       expect(producer_sell_all.is_primary_producer).to eq(true)
@@ -556,7 +562,7 @@ describe Enterprise do
   end
 
   describe "finding and automatically assigning a permalink" do
-    let(:enterprise) { build(:enterprise, name: "Name To Turn Into A Permalink") }
+    let(:enterprise) { build_stubbed(:enterprise, name: "Name To Turn Into A Permalink") }
     it "assigns permalink when initialized" do
       allow(Enterprise).to receive(:find_available_permalink).and_return("available_permalink")
       expect(Enterprise).to receive(:find_available_permalink).with("Name To Turn Into A Permalink")

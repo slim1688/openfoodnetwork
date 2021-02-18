@@ -1,7 +1,7 @@
 = admin_inject_currency_config
 = render "layouts/i18n_script"
 
-#wrapper{"data-hook" => ""}
+#wrapper{ data: { hook: '' } }
   - if flash[:error]
     .flash.error= flash[:error]
   - if notice
@@ -9,12 +9,7 @@
   - if flash[:success]
     .flash.success= flash[:success]
 
-  #progress
-    .wrapper
-      #spinner
-      .progress-message
-        = Spree.t(:loading)
-        \...
+  = render partial: "spree/layouts/admin/progress_spinner"
 
   %header#header{"data-hook" => ""}
     .container
@@ -23,30 +18,30 @@
       %nav.columns.eleven{"data-hook" => "admin_login_navigation_bar"}
         = render :partial => 'spree/layouts/admin/login_nav'
 
-  %nav#admin-menu{"data-hook" => ""}
-    .container
+  %nav#admin-menu{ data: { hook: '' }}
+    .container.no-gutter
       .sixteen.columns.main-menu-wrapper
-        %ul.inline-menu.fullwidth-menu{"data-hook" => "admin_tabs"}
+        %ul.inline-menu{"data-hook" => "admin_tabs"}
           = render :partial => 'spree/admin/shared/tabs'
 
   - if content_for?(:sub_menu)
-    %nav#sub-menu{"data-hook" => ""}
+    %nav#sub-menu{ data: { hook: ''} }
       .container
         .sixteen.columns
           = yield :sub_menu
 
   - if content_for?(:page_title) || content_for?(:page_actions)
-    #content-header{"data-hook" => ""}
+    .js-admin-section-header.admin__section-header{ data: { hook: '' } }
       .container
         .sixteen.columns
-          .block-table
+          .admin__section-header__content
             - if content_for?(:page_title)
-              .table-cell
-                %h1{:class => "page-title"}= yield :page_title
+              .admin__section-header__title
+                %h1.js-admin-page-title= yield :page_title
+
             - if content_for?(:page_actions)
-              .page-actions.table-cell.toolbar{"data-hook" => "toolbar"}
-                %ul.inline-menu
-                  = yield :page_actions
+              %ul.admin__section-header__actions{ data: { hook: 'toolbar' } }
+                = yield :page_actions
 
   .container
     .row
@@ -71,4 +66,6 @@
 %div{"data-hook" => "admin_footer_scripts"}
 
 %script
-  = raw "Spree.api_key = \"#{try_spree_current_user.try(:spree_api_key).to_s}\";"
+  = raw "Spree.api_key = \"#{spree_current_user.try(:spree_api_key).to_s}\";"
+
+= render "layouts/matomo_tag"

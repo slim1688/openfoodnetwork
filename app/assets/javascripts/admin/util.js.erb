@@ -1,22 +1,45 @@
 $(document).ready(function() {
-  $('.datetimepicker').datetimepicker({
-    dateFormat: 'yy-mm-dd',
-    timeFormat: 'HH:mm',
-    dayNames: Spree.translations.abbr_day_names,
-    dayNamesMin: Spree.translations.abbr_day_names,
-    monthNames: Spree.translations.month_names,
-    prevText: Spree.translations.previous,
-    nextText: Spree.translations.next,
-    showOn: 'button',
-    controlType: 'select',
-    oneLine: true,
-    buttonImage: "<%= asset_path 'datepicker/cal.gif' %>",
-    buttonImageOnly: true,
-    stepMinute: 15
-  });
-});
-
-$(document).ready(function(){
+  var onClickButtons = function(index, fp) {
+    var date;
+    switch (index) {
+      case 0:
+        date = new Date();
+        break;
+    }
+    fp.setDate(date, true);
+  }
+  window.FLATPICKR_DATE_DEFAULT = {
+    dateFormat: Spree.translations.flatpickr_date_format,
+    locale: I18n.locale,
+    plugins: [
+        ShortcutButtonsPlugin({
+          button: [{
+            label: Spree.translations.today
+          }],
+          label: "or",
+          onClick: onClickButtons
+        })
+      ]
+  }
+  window.FLATPICKR_DATETIME_DEFAULT = Object.assign(
+    {},
+    window.FLATPICKR_DATE_DEFAULT,
+    {
+      dateFormat: Spree.translations.flatpickr_datetime_format,
+      enableTime: true,
+      time_24hr: true,
+      plugins: [
+        ShortcutButtonsPlugin({
+          button: [{
+            label: Spree.translations.now
+          }],
+          label: "or",
+          onClick: onClickButtons
+        })
+      ]
+    }
+  );
+  flatpickr(".datetimepicker", window.FLATPICKR_DATETIME_DEFAULT);
   $('a.close').click(function(event){
     event.preventDefault();
     $(this).parent().slideUp(250);

@@ -1,5 +1,9 @@
+# frozen_string_literal: true
+
 require "spec_helper"
+require 'open_food_network/orders_and_fulfillments_report'
 require 'open_food_network/orders_and_fulfillments_report/customer_totals_report'
+require 'open_food_network/order_grouper'
 
 RSpec.describe OpenFoodNetwork::OrdersAndFulfillmentsReport::CustomerTotalsReport do
   let!(:distributor) { create(:distributor_enterprise) }
@@ -18,7 +22,7 @@ RSpec.describe OpenFoodNetwork::OrdersAndFulfillmentsReport::CustomerTotalsRepor
   context "viewing the report" do
     let!(:order) do
       create(:completed_order_with_totals, line_items_count: 1, user: customer.user,
-             customer: customer, distributor: distributor)
+                                           customer: customer, distributor: distributor)
     end
 
     it "generates the report" do
@@ -35,6 +39,22 @@ RSpec.describe OpenFoodNetwork::OrdersAndFulfillmentsReport::CustomerTotalsRepor
       total_field = report_table.last[5]
       expect(total_field).to eq I18n.t("admin.reports.total")
     end
+
+    it 'includes the order number and date in item rows' do
+      order_number_and_date_fields = report_table.first[33..34]
+      expect(order_number_and_date_fields).to eq([
+                                                   order.number,
+                                                   order.completed_at.strftime("%F %T"),
+                                                 ])
+    end
+
+    it 'includes the order number and date in total rows' do
+      order_number_and_date_fields = report_table.last[33..34]
+      expect(order_number_and_date_fields).to eq([
+                                                   order.number,
+                                                   order.completed_at.strftime("%F %T"),
+                                                 ])
+    end
   end
 
   context "loading shipping methods" do
@@ -49,7 +69,7 @@ RSpec.describe OpenFoodNetwork::OrdersAndFulfillmentsReport::CustomerTotalsRepor
     }
     let!(:order) do
       create(:completed_order_with_totals, line_items_count: 1, user: customer.user,
-             customer: customer, distributor: distributor)
+                                           customer: customer, distributor: distributor)
     end
 
     before do
@@ -63,10 +83,31 @@ RSpec.describe OpenFoodNetwork::OrdersAndFulfillmentsReport::CustomerTotalsRepor
     end
   end
 
+  context "displaying payment fees" do
+    context "with both failed and completed payments present" do
+      let!(:order) {
+        create(:order_ready_to_ship, user: customer.user,
+                                     customer: customer, distributor: distributor)
+      }
+      let(:completed_payment) { order.payments.completed.first }
+      let!(:failed_payment) { create(:payment, order: order, state: "failed") }
+
+      before do
+        completed_payment.adjustment.update amount: 123.00
+        failed_payment.adjustment.update amount: 456.00, eligible: false, state: "finalized"
+      end
+
+      it "shows the correct payment fee amount for the order" do
+        payment_fee_field = report_table.last[12]
+        expect(payment_fee_field).to eq completed_payment.adjustment.amount
+      end
+    end
+  end
+
   context 'when a variant override applies' do
     let!(:order) do
       create(:completed_order_with_totals, line_items_count: 1, user: customer.user,
-             customer: customer, distributor: distributor)
+                                           customer: customer, distributor: distributor)
     end
     let(:overidden_sku) { 'magical_sku' }
 

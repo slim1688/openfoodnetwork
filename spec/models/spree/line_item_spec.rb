@@ -1,7 +1,146 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Spree
   describe LineItem do
+    let(:order) { create :order_with_line_items, line_items_count: 1 }
+    let(:line_item) { order.line_items.first }
+
+    context '#save' do
+      it 'should update inventory, totals, and tax' do
+        # Regression check for Spree #1481
+        expect(line_item.order).to receive(:create_tax_charge!)
+        expect(line_item.order).to receive(:update!)
+        line_item.quantity = 2
+        line_item.save
+      end
+    end
+
+    context '#destroy' do
+      # Regression test for Spree #1481
+      it "applies tax adjustments" do
+        expect(line_item.order).to receive(:create_tax_charge!)
+        line_item.destroy
+      end
+
+      it "fetches deleted products" do
+        line_item.product.destroy
+        expect(line_item.reload.product).to be_a Spree::Product
+      end
+
+      it "fetches deleted variants" do
+        line_item.variant.destroy
+        expect(line_item.reload.variant).to be_a Spree::Variant
+      end
+    end
+
+    # Test for Spree #3391
+    context '#copy_price' do
+      it "copies over a variant's prices" do
+        line_item.price = nil
+        line_item.cost_price = nil
+        line_item.currency = nil
+        line_item.copy_price
+        variant = line_item.variant
+        expect(line_item.price).to eq variant.price
+        expect(line_item.cost_price).to eq variant.cost_price
+        expect(line_item.currency).to eq variant.currency
+      end
+    end
+
+    # Test for Spree #3481
+    context '#copy_tax_category' do
+      it "copies over a variant's tax category" do
+        line_item.tax_category = nil
+        line_item.copy_tax_category
+        expect(line_item.tax_category).to eq line_item.variant.product.tax_category
+      end
+    end
+
+    describe '.currency' do
+      it 'returns the globally configured currency' do
+        line_item.currency == 'USD'
+      end
+    end
+
+    describe ".money" do
+      before do
+        line_item.price = 3.50
+        line_item.quantity = 2
+      end
+
+      it "returns a Spree::Money representing the total for this line item" do
+        expect(line_item.money.to_s).to eq "$7.00"
+      end
+    end
+
+    describe '.single_money' do
+      before { line_item.price = 3.50 }
+      it "returns a Spree::Money representing the price for one variant" do
+        expect(line_item.single_money.to_s).to eq "$3.50"
+      end
+    end
+
+    context "has inventory (completed order so items were already unstocked)" do
+      let(:order) { Spree::Order.create }
+      let(:variant) { create(:variant) }
+
+      context "nothing left on stock" do
+        before do
+          variant.stock_items.update_all count_on_hand: 5, backorderable: false
+          order.contents.add(variant, 5)
+          order.create_proposed_shipments
+          order.finalize!
+        end
+
+        it "allows to decrease item quantity" do
+          line_item = order.line_items.first
+          line_item.quantity -= 1
+          line_item.target_shipment = order.shipments.first
+
+          line_item.save
+          expect(line_item.errors[:quantity]).to be_empty
+        end
+
+        it "doesnt allow to increase item quantity" do
+          line_item = order.line_items.first
+          line_item.quantity += 2
+          line_item.target_shipment = order.shipments.first
+
+          line_item.save
+          expect(line_item.errors[:quantity].first).to include "is out of stock"
+        end
+      end
+
+      context "2 items left on stock" do
+        before do
+          variant.stock_items.update_all count_on_hand: 7, backorderable: false
+          order.contents.add(variant, 5)
+          order.create_proposed_shipments
+          order.finalize!
+        end
+
+        it "allows to increase quantity up to stock availability" do
+          line_item = order.line_items.first
+          line_item.quantity += 2
+          line_item.target_shipment = order.shipments.first
+
+          line_item.save
+          expect(line_item.errors[:quantity]).to be_empty
+        end
+
+        it "doesnt allow to increase quantity over stock availability" do
+          line_item = order.line_items.first
+          line_item.quantity += 3
+          line_item.target_shipment = order.shipments.first
+
+          line_item.save
+          expect(line_item.errors[:quantity].first).to include "is out of stock"
+        end
+      end
+    end
+
     describe "scopes" do
       let(:o) { create(:order) }
 
@@ -27,26 +166,22 @@ module Spree
 
       let(:oc_order) { create :order_with_totals_and_distribution }
 
-      it "finds line items for products supplied by a particular enterprise" do
-        expect(LineItem.supplied_by(s1)).to eq([li1])
-        expect(LineItem.supplied_by(s2)).to eq([li2])
-      end
-
       it "finds line items for products supplied by one of a number of enterprises" do
+        li1; li2
         expect(LineItem.supplied_by_any([s1])).to eq([li1])
         expect(LineItem.supplied_by_any([s2])).to eq([li2])
         expect(LineItem.supplied_by_any([s1, s2])).to match_array [li1, li2]
       end
 
       describe "finding line items with and without tax" do
-        let(:tax_rate) { create(:tax_rate, calculator: Spree::Calculator::DefaultTax.new) }
+        let(:tax_rate) { create(:tax_rate, calculator: ::Calculator::DefaultTax.new) }
         let!(:adjustment1) { create(:adjustment, originator: tax_rate, label: "TR", amount: 123, included_tax: 10.00) }
 
         before do
-            li1
-            li2
-            li1.adjustments << adjustment1
-          end
+          li1
+          li2
+          li1.adjustments << adjustment1
+        end
 
         it "finds line items with tax" do
           expect(LineItem.with_tax).to eq([li1])
@@ -71,7 +206,7 @@ module Spree
       let!(:li) { create(:line_item, variant: v, quantity: 10, max_quantity: 10) }
 
       before do
-        v.update_attributes! on_hand: 5
+        v.update! on_hand: 5
       end
 
       it "caps quantity" do
@@ -93,7 +228,7 @@ module Spree
       end
 
       it "does nothing for on_demand items" do
-        v.update_attributes! on_demand: true
+        v.update! on_demand: true
         li.cap_quantity_at_stock!
         li.reload
         expect(li.quantity).to eq 10
@@ -101,7 +236,7 @@ module Spree
       end
 
       it "caps at zero when stock is negative" do
-        v.update_attributes! on_hand: -2
+        v.__send__(:stock_item).update_column(:count_on_hand, -2)
         li.cap_quantity_at_stock!
         expect(li.reload.quantity).to eq 0
       end
@@ -111,7 +246,7 @@ module Spree
         let!(:vo) { create(:variant_override, hub: hub, variant: v, count_on_hand: 2) }
 
         before do
-          li.order.update_attributes(distributor_id: hub.id)
+          li.order.update(distributor_id: hub.id)
 
           # li#scoper is memoised, and this makes it difficult to update test conditions
           # so we reset it after the line_item is created for each spec
@@ -124,10 +259,10 @@ module Spree
         end
 
         context "when count on hand is negative" do
-          before { vo.update_attributes(count_on_hand: -3) }
+          before { vo.update(count_on_hand: -3) }
 
           it "caps at zero" do
-            v.update_attributes(on_hand: -2)
+            v.__send__(:stock_item).update_column(:count_on_hand, -2)
             li.cap_quantity_at_stock!
             expect(li.reload.quantity).to eq 0
           end
@@ -246,14 +381,8 @@ module Spree
       let!(:o) { create(:order, distributor: hub) }
       let!(:v) { create(:variant, on_demand: false, on_hand: 10) }
       let!(:v_on_demand) { create(:variant, on_demand: true, on_hand: 1) }
-      let!(:li) { create(:line_item, variant: v, order: o, quantity: 5, max_quantity: 5) }
-      let!(:li_on_demand) { create(:line_item, variant: v_on_demand, order: o, quantity: 99, max_quantity: 99) }
-
-      before do
-        # li#scoper is memoised, and this makes it difficult to update test conditions
-        # so we reset it after the line_item is created for each spec
-        li.remove_instance_variable(:@scoper)
-      end
+      let(:li) { build_stubbed(:line_item, variant: v, order: o, quantity: 5, max_quantity: 5) }
+      let(:li_on_demand) { build_stubbed(:line_item, variant: v_on_demand, order: o, quantity: 99, max_quantity: 99) }
 
       context "when the variant is on_demand" do
         it { expect(li_on_demand.sufficient_stock?).to be true }
@@ -264,7 +393,7 @@ module Spree
       end
 
       context "when the stock on the variant is not sufficient" do
-        before { v.update_attributes(on_hand: 4) }
+        before { v.update(on_hand: 4) }
 
         context "when no variant override is in place" do
           it { expect(li.sufficient_stock?).to be false }
@@ -278,7 +407,7 @@ module Spree
           end
 
           context "and stock on the variant override is not sufficient" do
-            before { vo.update_attributes(count_on_hand: 4) }
+            before { vo.update(count_on_hand: 4) }
 
             it { expect(li.sufficient_stock?).to be false }
           end
@@ -293,7 +422,7 @@ module Spree
         allow(li).to receive(:price) { 55.55 }
         allow(li).to receive_message_chain(:order, :adjustments, :loaded?)
         allow(li).to receive_message_chain(:order, :adjustments, :select)
-        allow(li).to receive_message_chain(:order, :adjustments, :where, :sum) { 11.11 }
+        allow(li).to receive_message_chain(:order, :adjustments, :where, :to_a, :sum) { 11.11 }
         allow(li).to receive(:quantity) { 2 }
         expect(li.price_with_adjustments).to eq(61.11)
       end
@@ -306,7 +435,7 @@ module Spree
         allow(li).to receive(:price) { 55.55 }
         allow(li).to receive_message_chain(:order, :adjustments, :loaded?)
         allow(li).to receive_message_chain(:order, :adjustments, :select)
-        allow(li).to receive_message_chain(:order, :adjustments, :where, :sum) { 11.11 }
+        allow(li).to receive_message_chain(:order, :adjustments, :where, :to_a, :sum) { 11.11 }
         allow(li).to receive(:quantity) { 2 }
         expect(li.amount_with_adjustments).to eq(122.22)
       end
@@ -315,7 +444,7 @@ module Spree
     describe "tax" do
       let(:li_no_tax)   { create(:line_item) }
       let(:li_tax)      { create(:line_item) }
-      let(:tax_rate)    { create(:tax_rate, calculator: Spree::Calculator::DefaultTax.new) }
+      let(:tax_rate)    { create(:tax_rate, calculator: ::Calculator::DefaultTax.new) }
       let!(:adjustment) { create(:adjustment, adjustable: li_tax, originator: tax_rate, label: "TR", amount: 123, included_tax: 10.00) }
 
       context "checking if a line item has tax included" do
@@ -379,7 +508,7 @@ module Spree
 
             context "and quantity is not changed" do
               before do
-                li.update_attributes(attrs)
+                li.update(attrs)
               end
 
               it "uses the value given" do
@@ -390,7 +519,7 @@ module Spree
             context "and quantity is changed" do
               before do
                 attrs[:quantity] = 4
-                li.update_attributes(attrs)
+                li.update(attrs)
               end
 
               it "uses the value given" do
@@ -404,7 +533,7 @@ module Spree
 
             context "and quantity is not changed" do
               before do
-                li.update_attributes(attrs)
+                li.update(attrs)
               end
 
               it "does not change final_weight_volume" do
@@ -418,7 +547,7 @@ module Spree
                   before do
                     expect(li.final_weight_volume).to eq 3000
                     attrs[:quantity] = 4
-                    li.update_attributes(attrs)
+                    li.update(attrs)
                   end
 
                   it "scales the final_weight_volume based on the change in quantity" do
@@ -428,9 +557,9 @@ module Spree
 
                 context "and a final_weight_volume has not been set" do
                   before do
-                    li.update_attributes(final_weight_volume: nil)
+                    li.update(final_weight_volume: nil)
                     attrs[:quantity] = 1
-                    li.update_attributes(attrs)
+                    li.update(attrs)
                   end
 
                   it "calculates a final_weight_volume from the variants unit_value" do
@@ -440,13 +569,13 @@ module Spree
               end
 
               context "from 0" do
-                before { li.update_attributes(quantity: 0) }
+                before { li.update(quantity: 0) }
 
                 context "and a final_weight_volume has been set" do
                   before do
                     expect(li.final_weight_volume).to eq 0
                     attrs[:quantity] = 4
-                    li.update_attributes(attrs)
+                    li.update(attrs)
                   end
 
                   it "recalculates a final_weight_volume from the variants unit_value" do
@@ -456,9 +585,9 @@ module Spree
 
                 context "and a final_weight_volume has not been set" do
                   before do
-                    li.update_attributes(final_weight_volume: nil)
+                    li.update(final_weight_volume: nil)
                     attrs[:quantity] = 1
-                    li.update_attributes(attrs)
+                    li.update(attrs)
                   end
 
                   it "calculates a final_weight_volume from the variants unit_value" do
@@ -543,16 +672,29 @@ module Spree
 
       describe "getting name for display" do
         it "returns product name" do
-          li = create(:line_item, product: create(:product))
+          li = build_stubbed(:line_item)
           expect(li.name_to_display).to eq(li.product.name)
         end
       end
 
       describe "getting unit for display" do
+        let(:o) { create(:order) }
+        let(:p1) { create(:product, name: 'Clear Honey', variant_unit_scale: 1) }
+        let(:v1) { create(:variant, product: p1, unit_value: 500) }
+        let(:li1) { create(:line_item, order: o, product: p1, variant: v1) }
+        let(:p2) { create(:product, name: 'Clear United States Honey', variant_unit_scale: 453.6) }
+        let(:v2) { create(:variant, product: p2, unit_value: 453.6) }
+        let(:li2) { create(:line_item, order: o, product: p2, variant: v2) }
+
         it "returns options_text" do
-          li = create(:line_item)
+          li = build_stubbed(:line_item)
           allow(li).to receive(:options_text).and_return "ponies"
           expect(li.unit_to_display).to eq("ponies")
+        end
+
+        it "returns options_text based on units" do
+          expect(li1.options_text).to eq("500g")
+          expect(li2.options_text).to eq("1lb")
         end
       end
 
@@ -601,8 +743,8 @@ module Spree
       end
 
       describe "calculating unit_value" do
-        let(:v) { create(:variant, unit_value: 10) }
-        let(:li) { create(:line_item, variant: v, quantity: 5) }
+        let(:v) { build_stubbed(:variant, unit_value: 10) }
+        let(:li) { build_stubbed(:line_item, variant: v, quantity: 5) }
 
         context "when the quantity is greater than zero" do
           context "and final_weight_volume has not been changed" do
@@ -614,14 +756,16 @@ module Spree
           end
 
           context "and final_weight_volume has been changed" do
-            before { li.update_attribute(:final_weight_volume, 35) }
+            before { li.final_weight_volume = 35 }
+
             it "returns the unit_value of the variant" do
               expect(li.unit_value).to eq 7
             end
           end
 
           context "and final_weight_volume is nil" do
-            before { li.update_attribute(:final_weight_volume, nil) }
+            before { li.final_weight_volume = nil }
+
             it "returns the unit_value of the variant" do
               expect(li.unit_value).to eq 10
             end
@@ -629,7 +773,8 @@ module Spree
         end
 
         context "when the quantity is zero" do
-          before { li.update_attribute(:quantity, 0) }
+          before { li.quantity = 0 }
+
           it "returns the unit_value of the variant" do
             expect(li.unit_value).to eq 10
           end
@@ -639,7 +784,7 @@ module Spree
 
     describe "deleting unit option values" do
       let!(:p) { create(:simple_product, variant_unit: 'weight', variant_unit_scale: 1) }
-      let!(:ot) { Spree::OptionType.find_by_name 'unit_weight' }
+      let!(:ot) { Spree::OptionType.find_by name: 'unit_weight' }
       let!(:li) { create(:line_item, product: p) }
 
       it "removes option value associations for unit option types" do

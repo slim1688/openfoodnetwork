@@ -1,6 +1,13 @@
+# frozen_string_literal: true
+
+require "spree/core/controller_helpers/auth"
+require "spree/core/controller_helpers/common"
+require "spree/core/controller_helpers/order"
+require "spree/core/controller_helpers/ssl"
+
 module Spree
   class UserSessionsController < Devise::SessionsController
-    helper 'spree/base', 'spree/store'
+    helper 'spree/base'
 
     include Spree::Core::ControllerHelpers::Auth
     include Spree::Core::ControllerHelpers::Common
@@ -10,7 +17,8 @@ module Spree
     ssl_required :new, :create, :destroy, :update
     ssl_allowed :login_bar
 
-    before_filter :set_checkout_redirect, only: :create
+    before_action :set_checkout_redirect, only: :create
+    after_action :ensure_valid_locale_persisted, only: :create
 
     def create
       authenticate_spree_user!
@@ -38,7 +46,17 @@ module Spree
       end
     end
 
+    def destroy
+      # Logout will clear session data including shopfront_redirect
+      #   Here we store it before actually logging out so that the redirect works correctly
+      @shopfront_redirect = session[:shopfront_redirect]
+
+      super
+    end
+
     private
+
+    attr_reader :shopfront_redirect
 
     def accurate_title
       Spree.t(:login)
@@ -47,6 +65,14 @@ module Spree
     def redirect_back_or_default(default)
       redirect_to(session["spree_user_return_to"] || default)
       session["spree_user_return_to"] = nil
+    end
+
+    def ensure_valid_locale_persisted
+      # When creating a new user session we have to wait until after a successful
+      # login to be able to persist a selected locale on the current user
+
+      UserLocaleSetter.new(spree_current_user, params[:locale], cookies).
+        ensure_valid_locale_persisted
     end
   end
 end

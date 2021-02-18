@@ -6,8 +6,8 @@ feature '
     As an administrator
     I want to create and edit orders
 ', js: true do
-  include AuthenticationWorkflow
   include WebHelper
+  include AuthenticationHelper
 
   let(:user) { create(:user) }
   let(:product) { create(:simple_product) }
@@ -43,15 +43,14 @@ feature '
     distributor_disabled = create(:distributor_enterprise)
     create(:simple_order_cycle, name: 'Two')
 
-    quick_login_as_admin
-    visit spree.admin_orders_path
+    login_as_admin_and_visit spree.admin_orders_path
     click_link 'New Order'
 
     # Distributors without an order cycle should be shown as disabled
     open_select2('#s2id_order_distributor_id')
     expect(page).to have_selector "ul.select2-results li.select2-result.select2-disabled",
                                   text: distributor_disabled.name
-    close_select2('#s2id_order_distributor_id')
+    close_select2
 
     # Order cycle selector should be disabled
     expect(page).to have_selector "#s2id_order_order_cycle_id.select2-container-disabled"
@@ -65,7 +64,7 @@ feature '
     # it suppresses validation errors when setting distribution
     expect(page).not_to have_selector '#errorExplanation'
     expect(page).to have_content 'ADD PRODUCT'
-    targetted_select2_search product.name, from: '#add_variant_id', dropdown_css: '.select2-drop'
+    select2_select product.name, from: 'add_variant_id', search: true
     find('button.add_variant').click
     page.has_selector? "table.index tbody[data-hook='admin_order_form_line_items'] tr" # Wait for JS
     expect(page).to have_selector 'td', text: product.name
@@ -79,10 +78,9 @@ feature '
   end
 
   scenario "can add a product to an existing order" do
-    quick_login_as_admin
-    visit spree.edit_admin_order_path(order)
+    login_as_admin_and_visit spree.edit_admin_order_path(order)
 
-    targetted_select2_search product.name, from: '#add_variant_id', dropdown_css: '.select2-drop'
+    select2_select product.name, from: 'add_variant_id', search: true
 
     find('button.add_variant').click
 
@@ -102,8 +100,7 @@ feature '
     order.user = nil
     order.save
 
-    quick_login_as_admin
-    visit spree.edit_admin_order_path(order)
+    login_as_admin_and_visit spree.edit_admin_order_path(order)
 
     expect(page).to have_select2 "order_distributor_id", with_options: [d.name]
     select2_select d.name, from: 'order_distributor_id'
@@ -117,15 +114,40 @@ feature '
   scenario "can't add products to an order outside the order's hub and order cycle" do
     product = create(:simple_product)
 
-    quick_login_as_admin
-    visit spree.edit_admin_order_path(order)
+    login_as_admin_and_visit spree.edit_admin_order_path(order)
 
     expect(page).not_to have_select2 "add_variant_id", with_options: [product.name]
   end
 
+  scenario "can't add more items than are available" do
+    # Move the order back to the cart state
+    order.state = 'cart'
+    order.completed_at = nil
+
+    login_as_admin_and_visit spree.edit_admin_order_path(order)
+
+    quantity = order.line_items.first.quantity
+    max_quantity = 0
+    total = order.display_total
+
+    within("tr.stock-item", text: order.products.first.name) do
+      find("a.edit-item").click
+      expect(page).to have_input(:quantity)
+      max_quantity = find("input[name='quantity']")["max"].to_i
+      fill_in(:quantity, with: max_quantity + 1)
+      find("a.save-item").click
+    end
+    accept_js_alert
+
+    expect(page).to_not have_content "Loading..."
+    within("tr.stock-item", text: order.products.first.name) do
+      expect(page).to have_text("#{max_quantity} x")
+    end
+    expect(order.reload.line_items.first.quantity).to eq(max_quantity)
+  end
+
   scenario "can't change distributor or order cycle once order has been finalized" do
-    quick_login_as_admin
-    visit spree.edit_admin_order_path(order)
+    login_as_admin_and_visit spree.edit_admin_order_path(order)
 
     expect(page).not_to have_select2 'order_distributor_id'
     expect(page).not_to have_select2 'order_order_cycle_id'
@@ -149,20 +171,22 @@ feature '
     order.shipping_method.update_attribute :require_ship_address, true
 
     # When I create a new order
-    quick_login_as user
+    login_as user
     new_order_with_distribution(distributor, order_cycle)
-    targetted_select2_search product.name, from: '#add_variant_id', dropdown_css: '.select2-drop'
+    select2_select product.name, from: 'add_variant_id', search: true
     find('button.add_variant').click
     page.has_selector? "table.index tbody[data-hook='admin_order_form_line_items'] tr" # Wait for JS
     click_button 'Update'
 
-    expect(page).to have_selector 'h1.page-title', text: "Customer Details"
+    expect(page).to have_selector 'h1.js-admin-page-title', text: "Customer Details"
+
+    # The customer selection partial should be visible
+    expect(page).to have_selector '#select-customer'
 
     # And I select that customer's email address and save the order
-    targetted_select2_search customer.email, from: '#customer_search_override',
-                                             dropdown_css: '.select2-drop'
+    select2_select customer.email, from: 'customer_search_override', search: true
     click_button 'Update'
-    expect(page).to have_selector "h1.page-title", text: "Customer Details"
+    expect(page).to have_selector "h1.js-admin-page-title", text: "Customer Details"
 
     # Then their addresses should be associated with the order
     order = Spree::Order.last
@@ -184,12 +208,12 @@ feature '
     let(:product) { order_cycle1.products.first }
 
     before(:each) do
-      @enterprise_user = create_enterprise_user
+      @enterprise_user = create(:user)
       @enterprise_user.enterprise_roles.build(enterprise: supplier1).save
       @enterprise_user.enterprise_roles.build(enterprise: coordinator1).save
       @enterprise_user.enterprise_roles.build(enterprise: distributor1).save
 
-      quick_login_as @enterprise_user
+      login_as @enterprise_user
     end
 
     feature "viewing the edit page" do
@@ -249,7 +273,7 @@ feature '
                                     href: spree.resend_admin_order_path(order)
           expect(page).to have_link "Send Invoice", href: spree.invoice_admin_order_path(order)
           expect(page).to have_link "Print Invoice", href: spree.print_admin_order_path(order)
-          expect(page).to have_link "Cancel Order", href: spree.fire_admin_order_path(order,                                                                                      e: 'cancel')
+          expect(page).to have_link "Cancel Order", href: spree.fire_admin_order_path(order, e: 'cancel')
         end
       end
 
@@ -282,7 +306,7 @@ feature '
                          from: 'selected_shipping_rate_id'
           find('.save-method').click
 
-          expect(page).to have_content different_shipping_method_for_distributor1.name
+          expect(page).to have_content "Shipping: #{different_shipping_method_for_distributor1.name}"
         end
       end
 
@@ -325,7 +349,7 @@ feature '
       new_order_with_distribution(distributor1, order_cycle1)
 
       expect(page).to have_content 'ADD PRODUCT'
-      targetted_select2_search product.name, from: '#add_variant_id', dropdown_css: '.select2-drop'
+      select2_select product.name, from: 'add_variant_id', search: true
 
       find('button.add_variant').click
       page.has_selector? "table.index tbody[data-hook='admin_order_form_line_items'] tr"

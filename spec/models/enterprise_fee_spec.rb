@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe EnterpriseFee do
@@ -60,17 +62,17 @@ describe EnterpriseFee do
   describe "scopes" do
     describe "finding per-item enterprise fees" do
       it "does not return fees with FlatRate, FlexiRate and PriceSack calculators" do
-        create(:enterprise_fee, calculator: Spree::Calculator::FlatRate.new)
-        create(:enterprise_fee, calculator: Spree::Calculator::FlexiRate.new)
-        create(:enterprise_fee, calculator: Spree::Calculator::PriceSack.new)
+        create(:enterprise_fee, calculator: Calculator::FlatRate.new)
+        create(:enterprise_fee, calculator: Calculator::FlexiRate.new)
+        create(:enterprise_fee, calculator: Calculator::PriceSack.new)
 
         expect(EnterpriseFee.per_item).to be_empty
       end
 
       it "returns fees with any other calculator" do
-        ef1 = create(:enterprise_fee, calculator: Spree::Calculator::DefaultTax.new)
+        ef1 = create(:enterprise_fee, calculator: Calculator::DefaultTax.new)
         ef2 = create(:enterprise_fee, calculator: Calculator::FlatPercentPerItem.new)
-        ef3 = create(:enterprise_fee, calculator: Spree::Calculator::PerItem.new)
+        ef3 = create(:enterprise_fee, calculator: Calculator::PerItem.new)
 
         expect(EnterpriseFee.per_item).to match_array [ef1, ef2, ef3]
       end
@@ -78,17 +80,17 @@ describe EnterpriseFee do
 
     describe "finding per-order enterprise fees" do
       it "returns fees with FlatRate, FlexiRate and PriceSack calculators" do
-        ef1 = create(:enterprise_fee, calculator: Spree::Calculator::FlatRate.new)
-        ef2 = create(:enterprise_fee, calculator: Spree::Calculator::FlexiRate.new)
-        ef3 = create(:enterprise_fee, calculator: Spree::Calculator::PriceSack.new)
+        ef1 = create(:enterprise_fee, calculator: Calculator::FlatRate.new)
+        ef2 = create(:enterprise_fee, calculator: Calculator::FlexiRate.new)
+        ef3 = create(:enterprise_fee, calculator: Calculator::PriceSack.new)
 
         expect(EnterpriseFee.per_order).to match_array [ef1, ef2, ef3]
       end
 
       it "does not return fees with any other calculator" do
-        ef1 = create(:enterprise_fee, calculator: Spree::Calculator::DefaultTax.new)
+        ef1 = create(:enterprise_fee, calculator: Calculator::DefaultTax.new)
         ef2 = create(:enterprise_fee, calculator: Calculator::FlatPercentPerItem.new)
-        ef3 = create(:enterprise_fee, calculator: Spree::Calculator::PerItem.new)
+        ef3 = create(:enterprise_fee, calculator: Calculator::PerItem.new)
 
         expect(EnterpriseFee.per_order).to be_empty
       end
@@ -130,11 +132,31 @@ describe EnterpriseFee do
                                  source: order,
                                  originator: tax_rate,
                                  state: 'closed',
-                                 label: 'hello' }, without_protection: true)
+                                 label: 'hello' })
 
       expect do
         EnterpriseFee.clear_all_adjustments_on_order order
       end.to change(order.adjustments, :count).by(0)
+    end
+  end
+
+  describe "soft-deletion" do
+    let(:tax_category) { create(:tax_category) }
+    let(:enterprise_fee) { create(:enterprise_fee, tax_category: tax_category ) }
+    let!(:adjustment) { create(:adjustment, originator: enterprise_fee) }
+
+    before do
+      enterprise_fee.destroy
+      enterprise_fee.reload
+    end
+
+    it "soft-deletes the enterprise fee" do
+      expect(enterprise_fee.deleted_at).to_not be_nil
+    end
+
+    it "can be accessed by old adjustments" do
+      expect(adjustment.reload.originator).to eq enterprise_fee
+      expect(adjustment.originator.tax_category).to eq enterprise_fee.tax_category
     end
   end
 end

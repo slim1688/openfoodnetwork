@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe SubscriptionMailer, type: :mailer do
@@ -19,7 +21,7 @@ describe SubscriptionMailer, type: :mailer do
       before do
         changes[order.line_items.first.id] = 2
         expect do
-          SubscriptionMailer.placement_email(order, changes).deliver
+          SubscriptionMailer.placement_email(order, changes).deliver_now
         end.to change{ SubscriptionMailer.deliveries.count }.by(1)
       end
 
@@ -33,7 +35,7 @@ describe SubscriptionMailer, type: :mailer do
     context "and changes have not been made to the order" do
       before do
         expect do
-          SubscriptionMailer.placement_email(order, {}).deliver
+          SubscriptionMailer.placement_email(order, {}).deliver_now
         end.to change{ SubscriptionMailer.deliveries.count }.by(1)
       end
 
@@ -45,7 +47,7 @@ describe SubscriptionMailer, type: :mailer do
     end
 
     describe "linking to order page" do
-      let(:order_link_href) { "href=\"#{spree.order_url(order)}\"" }
+      let(:order_link_href) { "href=\"#{order_url(order)}\"" }
       let(:order_link_style) { "style='[^']+'" }
 
       let(:shop) { create(:enterprise, allow_order_changes: true) }
@@ -54,7 +56,7 @@ describe SubscriptionMailer, type: :mailer do
       let(:body) { email.body.encoded }
 
       before do
-        SubscriptionMailer.placement_email(order, {}).deliver
+        SubscriptionMailer.placement_email(order, {}).deliver_now
       end
 
       context "when the customer has a user account" do
@@ -101,7 +103,7 @@ describe SubscriptionMailer, type: :mailer do
 
     before do
       expect do
-        SubscriptionMailer.confirmation_email(order).deliver
+        SubscriptionMailer.confirmation_email(order).deliver_now
       end.to change{ SubscriptionMailer.deliveries.count }.by(1)
     end
 
@@ -111,7 +113,7 @@ describe SubscriptionMailer, type: :mailer do
     end
 
     describe "linking to order page" do
-      let(:order_link_href) { "href=\"#{spree.order_url(order)}\"" }
+      let(:order_link_href) { "href=\"#{order_url(order)}\"" }
 
       let(:email) { SubscriptionMailer.deliveries.last }
       let(:body) { email.body.encoded }
@@ -141,7 +143,7 @@ describe SubscriptionMailer, type: :mailer do
 
     before do
       expect do
-        SubscriptionMailer.empty_email(order, {}).deliver
+        SubscriptionMailer.empty_email(order, {}).deliver_now
       end.to change{ SubscriptionMailer.deliveries.count }.by(1)
     end
 
@@ -162,7 +164,7 @@ describe SubscriptionMailer, type: :mailer do
       order.errors.add(:base, "This is a payment failure error")
 
       expect do
-        SubscriptionMailer.failed_payment_email(order).deliver
+        SubscriptionMailer.failed_payment_email(order).deliver_now
       end.to change{ SubscriptionMailer.deliveries.count }.by(1)
     end
 
@@ -177,7 +179,7 @@ describe SubscriptionMailer, type: :mailer do
     end
 
     describe "linking to order page" do
-      let(:order_link_href) { "href=\"#{spree.order_url(order)}\"" }
+      let(:order_link_href) { "href=\"#{order_url(order)}\"" }
 
       let(:email) { SubscriptionMailer.deliveries.last }
       let(:body) { email.body.encoded }
@@ -213,7 +215,7 @@ describe SubscriptionMailer, type: :mailer do
         allow(summary).to receive(:order_count) { 37 }
         allow(summary).to receive(:issue_count) { 0 }
         allow(summary).to receive(:issues) { {} }
-        SubscriptionMailer.placement_summary_email(summary).deliver
+        SubscriptionMailer.placement_summary_email(summary).deliver_now
       end
 
       it "sends the email, which notifies the enterprise that all orders were successfully processed" do
@@ -238,7 +240,7 @@ describe SubscriptionMailer, type: :mailer do
 
       context "when no unrecorded issues are present" do
         it "sends the email, which notifies the enterprise that some issues were encountered" do
-          SubscriptionMailer.placement_summary_email(summary).deliver
+          SubscriptionMailer.placement_summary_email(summary).deliver_now
           expect(body).to include I18n.t("#{scope}.placement_summary_email.intro", shop: shop.name)
           expect(body).to include I18n.t("#{scope}.summary_overview.total", count: 37)
           expect(body).to include I18n.t("#{scope}.summary_overview.success_some", count: 35)
@@ -266,7 +268,7 @@ describe SubscriptionMailer, type: :mailer do
 
         it "sends the email, which notifies the enterprise that some issues were encountered" do
           expect(summary).to receive(:orders_affected_by).with(:other) { [order3, order4] }
-          SubscriptionMailer.placement_summary_email(summary).deliver
+          SubscriptionMailer.placement_summary_email(summary).deliver_now
           expect(body).to include I18n.t("#{scope}.summary_detail.processing.title", count: 2)
           expect(body).to include I18n.t("#{scope}.summary_detail.processing.explainer")
           expect(body).to include I18n.t("#{scope}.summary_detail.other.title", count: 2)
@@ -289,7 +291,7 @@ describe SubscriptionMailer, type: :mailer do
         allow(summary).to receive(:issue_count) { 2 }
         allow(summary).to receive(:issues) { { changes: { 1 => nil, 2 => nil } } }
         allow(summary).to receive(:orders_affected_by) { [order1, order2] }
-        SubscriptionMailer.placement_summary_email(summary).deliver
+        SubscriptionMailer.placement_summary_email(summary).deliver_now
       end
 
       it "sends the email, which notifies the enterprise that some issues were encountered" do
@@ -323,7 +325,7 @@ describe SubscriptionMailer, type: :mailer do
         allow(summary).to receive(:order_count) { 37 }
         allow(summary).to receive(:issue_count) { 0 }
         allow(summary).to receive(:issues) { {} }
-        SubscriptionMailer.confirmation_summary_email(summary).deliver
+        SubscriptionMailer.confirmation_summary_email(summary).deliver_now
       end
 
       it "sends the email, which notifies the enterprise that all orders were successfully processed" do
@@ -348,7 +350,7 @@ describe SubscriptionMailer, type: :mailer do
 
       context "when no unrecorded issues are present" do
         it "sends the email, which notifies the enterprise that some issues were encountered" do
-          SubscriptionMailer.confirmation_summary_email(summary).deliver
+          SubscriptionMailer.confirmation_summary_email(summary).deliver_now
           expect(body).to include I18n.t("#{scope}.confirmation_summary_email.intro", shop: shop.name)
           expect(body).to include I18n.t("#{scope}.summary_overview.total", count: 37)
           expect(body).to include I18n.t("#{scope}.summary_overview.success_some", count: 35)
@@ -376,7 +378,7 @@ describe SubscriptionMailer, type: :mailer do
 
         it "sends the email, which notifies the enterprise that some issues were encountered" do
           expect(summary).to receive(:orders_affected_by).with(:other) { [order3, order4] }
-          SubscriptionMailer.confirmation_summary_email(summary).deliver
+          SubscriptionMailer.confirmation_summary_email(summary).deliver_now
           expect(body).to include I18n.t("#{scope}.summary_detail.failed_payment.title", count: 2)
           expect(body).to include I18n.t("#{scope}.summary_detail.failed_payment.explainer")
           expect(body).to include I18n.t("#{scope}.summary_detail.other.title", count: 2)
@@ -399,7 +401,7 @@ describe SubscriptionMailer, type: :mailer do
         allow(summary).to receive(:issue_count) { 2 }
         allow(summary).to receive(:issues) { { changes: { 1 => nil, 2 => nil } } }
         allow(summary).to receive(:orders_affected_by) { [order1, order2] }
-        SubscriptionMailer.confirmation_summary_email(summary).deliver
+        SubscriptionMailer.confirmation_summary_email(summary).deliver_now
       end
 
       it "sends the email, which notifies the enterprise that some issues were encountered" do

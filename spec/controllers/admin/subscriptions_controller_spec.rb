@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Admin::SubscriptionsController, type: :controller do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include OpenFoodNetwork::EmailHelper
 
   describe 'index' do
@@ -17,20 +19,20 @@ describe Admin::SubscriptionsController, type: :controller do
 
       context 'as a regular user' do
         it 'redirects to unauthorized' do
-          spree_get :index, params
-          expect(response).to redirect_to spree.unauthorized_path
+          get :index, params
+          expect(response).to redirect_to unauthorized_path
         end
       end
 
       context 'as an enterprise user' do
-        before { shop.update_attributes(owner: user) }
+        before { shop.update(owner: user) }
         let!(:not_enabled_shop) { create(:distributor_enterprise, owner: user) }
 
         context "where I manage a shop that is set up for subscriptions" do
           let!(:subscription) { create(:subscription, shop: shop) }
 
           it 'renders the index page with appropriate data' do
-            spree_get :index, params
+            get :index, params
             expect(response).to render_template 'index'
             expect(assigns(:collection)).to eq [] # No collection loaded
             expect(assigns(:shops)).to eq [shop] # Shops are loaded
@@ -39,7 +41,7 @@ describe Admin::SubscriptionsController, type: :controller do
 
         context "where I don't manage a shop that is set up for subscriptions" do
           it 'renders the setup_explanation page' do
-            spree_get :index, params
+            get :index, params
             expect(response).to render_template 'setup_explanation'
             expect(assigns(:collection)).to eq [] # No collection loaded
             expect(assigns(:shop)).to eq shop # First SO enabled shop is loaded
@@ -54,18 +56,18 @@ describe Admin::SubscriptionsController, type: :controller do
 
       context 'as a regular user' do
         it 'redirects to unauthorized' do
-          spree_get :index, params
-          expect(response).to redirect_to spree.unauthorized_path
+          get :index, params
+          expect(response).to redirect_to unauthorized_path
         end
       end
 
       context 'as an enterprise user' do
-        before { shop.update_attributes(owner: user) }
+        before { shop.update(owner: user) }
         let!(:shop2) { create(:distributor_enterprise, owner: user) }
         let!(:subscription2) { create(:subscription, shop: shop2) }
 
         it 'renders the collection as json' do
-          spree_get :index, params
+          get :index, params
           json_response = JSON.parse(response.body)
           expect(json_response.count).to be 2
           expect(json_response.map{ |so| so['id'] }).to include subscription.id, subscription2.id
@@ -75,7 +77,7 @@ describe Admin::SubscriptionsController, type: :controller do
           before { params.merge!(q: { shop_id_eq: shop2.id }) }
 
           it "restricts the list of subscriptions" do
-            spree_get :index, params
+            get :index, params
             json_response = JSON.parse(response.body)
             expect(json_response.count).to be 1
             ids = json_response.map{ |so| so['id'] }
@@ -97,7 +99,7 @@ describe Admin::SubscriptionsController, type: :controller do
 
     it 'loads the preloads the necessary data' do
       expect(controller).to receive(:load_form_data)
-      spree_get :new, subscription: { shop_id: shop.id }
+      get :new, subscription: { shop_id: shop.id }
       expect(assigns(:subscription)).to be_a_new Subscription
       expect(assigns(:subscription).shop).to eq shop
     end
@@ -120,7 +122,7 @@ describe Admin::SubscriptionsController, type: :controller do
 
       it 'redirects to unauthorized' do
         spree_post :create, params
-        expect(response).to redirect_to spree.unauthorized_path
+        expect(response).to redirect_to unauthorized_path
       end
     end
 
@@ -236,7 +238,7 @@ describe Admin::SubscriptionsController, type: :controller do
 
     it 'loads the preloads the necessary data' do
       expect(controller).to receive(:load_form_data)
-      spree_get :edit, id: subscription.id
+      get :edit, id: subscription.id
       expect(assigns(:subscription)).to eq subscription
     end
   end
@@ -272,7 +274,7 @@ describe Admin::SubscriptionsController, type: :controller do
 
       it 'redirects to unauthorized' do
         spree_post :update, params
-        expect(response).to redirect_to spree.unauthorized_path
+        expect(response).to redirect_to unauthorized_path
       end
     end
 
@@ -357,7 +359,7 @@ describe Admin::SubscriptionsController, type: :controller do
           end
 
           context 'where the specified variants are available from the shop' do
-            before { outgoing_exchange.update_attributes(variants: [variant1, variant2]) }
+            before { outgoing_exchange.update(variants: [variant1, variant2]) }
 
             it 'creates subscription line items for the subscription' do
               expect{ spree_post :update, params }.to change{ subscription.subscription_line_items.count }.by(1)
@@ -390,23 +392,23 @@ describe Admin::SubscriptionsController, type: :controller do
       context 'as a regular user' do
         it 'redirects to unauthorized' do
           spree_put :cancel, params
-          expect(response).to redirect_to spree.unauthorized_path
+          expect(response).to redirect_to unauthorized_path
         end
       end
 
       context 'as an enterprise user' do
         context "without authorisation" do
           let!(:shop2) { create(:distributor_enterprise) }
-          before { shop2.update_attributes(owner: user) }
+          before { shop2.update(owner: user) }
 
           it 'redirects to unauthorized' do
             spree_put :cancel, params
-            expect(response).to redirect_to spree.unauthorized_path
+            expect(response).to redirect_to unauthorized_path
           end
         end
 
         context "with authorisation" do
-          before { shop.update_attributes(owner: user) }
+          before { shop.update(owner: user) }
 
           context "when at least one associated order is still 'open'" do
             let(:order_cycle) { subscription.order_cycles.first }
@@ -444,7 +446,7 @@ describe Admin::SubscriptionsController, type: :controller do
               before do
                 params[:open_orders] = 'cancel'
                 allow(Spree::OrderMailer).to receive(:cancel_email) { mail_mock }
-                allow(mail_mock).to receive(:deliver)
+                allow(mail_mock).to receive(:deliver_later)
               end
 
               it 'renders the cancelled subscription as json, and cancels the open order' do
@@ -455,7 +457,7 @@ describe Admin::SubscriptionsController, type: :controller do
                 expect(subscription.reload.canceled_at).to be_within(5.seconds).of Time.zone.now
                 expect(order.reload.state).to eq 'canceled'
                 expect(proxy_order.reload.canceled_at).to be_within(5.seconds).of Time.zone.now
-                expect(mail_mock).to have_received(:deliver)
+                expect(mail_mock).to have_received(:deliver_later)
               end
             end
           end
@@ -489,23 +491,23 @@ describe Admin::SubscriptionsController, type: :controller do
       context 'as a regular user' do
         it 'redirects to unauthorized' do
           spree_put :pause, params
-          expect(response).to redirect_to spree.unauthorized_path
+          expect(response).to redirect_to unauthorized_path
         end
       end
 
       context 'as an enterprise user' do
         context "without authorisation" do
           let!(:shop2) { create(:distributor_enterprise) }
-          before { shop2.update_attributes(owner: user) }
+          before { shop2.update(owner: user) }
 
           it 'redirects to unauthorized' do
             spree_put :pause, params
-            expect(response).to redirect_to spree.unauthorized_path
+            expect(response).to redirect_to unauthorized_path
           end
         end
 
         context "with authorisation" do
-          before { shop.update_attributes(owner: user) }
+          before { shop.update(owner: user) }
 
           context "when at least one associated order is still 'open'" do
             let(:order_cycle) { subscription.order_cycles.first }
@@ -543,7 +545,7 @@ describe Admin::SubscriptionsController, type: :controller do
               before do
                 params[:open_orders] = 'cancel'
                 allow(Spree::OrderMailer).to receive(:cancel_email) { mail_mock }
-                allow(mail_mock).to receive(:deliver)
+                allow(mail_mock).to receive(:deliver_later)
               end
 
               it 'renders the paused subscription as json, and cancels the open order' do
@@ -554,7 +556,7 @@ describe Admin::SubscriptionsController, type: :controller do
                 expect(subscription.reload.paused_at).to be_within(5.seconds).of Time.zone.now
                 expect(order.reload.state).to eq 'canceled'
                 expect(proxy_order.reload.canceled_at).to be_within(5.seconds).of Time.zone.now
-                expect(mail_mock).to have_received(:deliver)
+                expect(mail_mock).to have_received(:deliver_later)
               end
             end
           end
@@ -588,23 +590,23 @@ describe Admin::SubscriptionsController, type: :controller do
       context 'as a regular user' do
         it 'redirects to unauthorized' do
           spree_put :unpause, params
-          expect(response).to redirect_to spree.unauthorized_path
+          expect(response).to redirect_to unauthorized_path
         end
       end
 
       context 'as an enterprise user' do
         context "without authorisation" do
           let!(:shop2) { create(:distributor_enterprise) }
-          before { shop2.update_attributes(owner: user) }
+          before { shop2.update(owner: user) }
 
           it 'redirects to unauthorized' do
             spree_put :unpause, params
-            expect(response).to redirect_to spree.unauthorized_path
+            expect(response).to redirect_to unauthorized_path
           end
         end
 
         context "with authorisation" do
-          before { shop.update_attributes(owner: user) }
+          before { shop.update(owner: user) }
 
           context "when at least one order in an open order cycle is 'complete'" do
             let(:order_cycle) { subscription.order_cycles.first }
@@ -704,7 +706,7 @@ describe Admin::SubscriptionsController, type: :controller do
     end
 
     context "when other payment methods exist" do
-      let!(:stripe) { create(:stripe_payment_method, distributors: [shop]) }
+      let!(:stripe) { create(:stripe_connect_payment_method, distributors: [shop]) }
       let!(:paypal) { Spree::Gateway::PayPalExpress.create!(name: "PayPalExpress", distributor_ids: [shop.id]) }
       let!(:bogus) { create(:bogus_payment_method, distributors: [shop]) }
 

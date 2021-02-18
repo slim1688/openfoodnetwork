@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature "As a consumer I want to view products", js: true do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include WebHelper
   include ShopWorkflow
   include UIComponentHelper
@@ -30,8 +32,6 @@ feature "As a consumer I want to view products", js: true do
         product.save!
 
         visit shop_path
-        select "monday", from: "order_cycle_id"
-
         expect(page).to have_content product.name
         click_link product.name
 
@@ -48,8 +48,6 @@ feature "As a consumer I want to view products", js: true do
         product.save!
 
         visit shop_path
-        select "monday", from: "order_cycle_id"
-
         expect(page).to have_content product.name
         click_link product.name
 

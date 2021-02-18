@@ -1,7 +1,7 @@
 describe "Enterprises service", ->
   Enterprises = $rootScope = null
   CurrentHubMock = {}
-  Geo =
+  GmapsGeo =
     OK: 'ok'
     succeed: true
     geocode: (query, callback) ->
@@ -24,14 +24,14 @@ describe "Enterprises service", ->
     {id: 5, visible: true, name: 'e', category: "producer_hub", hubs: [{id: 1}]},
     {id: 6, visible: true, name: 'f', category: "producer_shop", hubs: [{id: 2}]},
     {id: 7, visible: true, name: 'g', category: "producer", hubs: [{id: 2}]}
-    {id: 8, visible: true, name: 'h', category: "producer", hubs: [{id: 2}]}
+    {id: 8, visible: true, name: 'h', category: "producer", hubs: [{id: 2}], latitude: 76.26, longitude: -42.66 }
   ]
   H1: 0
   beforeEach ->
     module 'Darkswarm'
     module ($provide)->
       $provide.value "CurrentHub", CurrentHubMock
-      $provide.value "Geo", Geo
+      $provide.value "GmapsGeo", GmapsGeo
       null
     angular.module('Darkswarm').value('enterprises', enterprises)
     angular.module('Darkswarm').value('taxons', taxons)
@@ -118,12 +118,12 @@ describe "Enterprises service", ->
       spyOn(Enterprises, "setDistanceFrom")
 
     it "calculates distance for all enterprises when geocoding succeeds", ->
-      Geo.succeed = true
+      GmapsGeo.succeed = true
       Enterprises.calculateDistanceGeo('query')
       expect(Enterprises.setDistanceFrom).toHaveBeenCalledWith("location")
 
     it "resets distance when geocoding fails", ->
-      Geo.succeed = false
+      GmapsGeo.succeed = false
       spyOn(Enterprises, "resetDistance")
       Enterprises.calculateDistanceGeo('query')
       expect(Enterprises.setDistanceFrom).not.toHaveBeenCalled()
@@ -143,3 +143,7 @@ describe "Enterprises service", ->
       Enterprises.resetDistance()
       for e in Enterprises.enterprises
         expect(e.distance).toBeNull()
+
+  describe "geocodedEnterprises", ->
+    it "only returns enterprises which have a latitude and longitude", ->
+      expect(Enterprises.geocodedEnterprises()).toEqual [Enterprises.enterprises[7]]

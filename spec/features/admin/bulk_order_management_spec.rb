@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature '
@@ -5,12 +7,12 @@ feature '
   I want to be able to manage orders in bulk
 ', js: true do
   include AdminHelper
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include WebHelper
 
   context "listing orders" do
     before :each do
-      quick_login_as_admin
+      login_as_admin
     end
 
     it "displays a message when number of line items is zero" do
@@ -121,7 +123,7 @@ feature '
 
   context "altering line item properties" do
     before :each do
-      quick_login_as_admin
+      login_as_admin
     end
 
     context "tracking changes" do
@@ -177,7 +179,7 @@ feature '
 
   context "using page controls" do
     before :each do
-      quick_login_as_admin
+      login_as_admin
     end
 
     let!(:p1) { create(:product_with_option_types, group_buy: true, group_buy_unit_size: 5000, variant_unit: "weight", variants: [create(:variant, unit_value: 1000)] ) }
@@ -265,12 +267,12 @@ feature '
         it "displays a select box for producers, which filters line items by the selected supplier" do
           expect(page).to have_selector "tr#li_#{li1.id}"
           expect(page).to have_selector "tr#li_#{li2.id}"
-          open_select2 "div.select2-container#s2id_supplier_filter"
+          open_select2 "#s2id_supplier_filter"
           expect(page).to have_selector "div.select2-drop-active ul.select2-results li", text: "All"
           Enterprise.is_primary_producer.map(&:name).each do |sn|
             expect(page).to have_selector "div.select2-drop-active ul.select2-results li", text: sn
           end
-          close_select2 "#s2id_supplier_filter"
+          close_select2
           select2_select s1.name, from: "supplier_filter"
           expect(page).to have_selector "tr#li_#{li1.id}"
           expect(page).to have_no_selector "tr#li_#{li2.id}"
@@ -303,12 +305,12 @@ feature '
         it "displays a select box for distributors, which filters line items by the selected distributor" do
           expect(page).to have_selector "tr#li_#{li1.id}"
           expect(page).to have_selector "tr#li_#{li2.id}"
-          open_select2 "div.select2-container#s2id_distributor_filter"
+          open_select2 "#s2id_distributor_filter"
           expect(page).to have_selector "div.select2-drop-active ul.select2-results li", text: "All"
           Enterprise.is_distributor.map(&:name).each do |dn|
             expect(page).to have_selector "div.select2-drop-active ul.select2-results li", text: dn
           end
-          close_select2 "#s2id_distributor_filter"
+          close_select2
           select2_select d1.name, from: "distributor_filter"
           expect(page).to have_selector "tr#li_#{li1.id}"
           expect(page).to have_no_selector "tr#li_#{li2.id}"
@@ -469,7 +471,7 @@ feature '
 
       it "displays only line items whose orders meet the date restriction criteria, when changed" do
         find('#start_date_filter').click
-        select_date(Time.zone.today - 8.days)
+        select_date_from_datepicker Time.zone.today - 8.days
 
         expect(page).to have_selector "tr#li_#{li1.id}"
         expect(page).to have_selector "tr#li_#{li2.id}"
@@ -477,7 +479,7 @@ feature '
         expect(page).to have_no_selector "tr#li_#{li4.id}"
 
         find('#end_date_filter').click
-        select_date(Time.zone.today + 1.day)
+        select_date_from_datepicker Time.zone.today + 1.day
 
         expect(page).to have_selector "tr#li_#{li1.id}"
         expect(page).to have_selector "tr#li_#{li2.id}"
@@ -494,7 +496,8 @@ feature '
 
         it "shows a dialog and ignores changes when confirm dialog is accepted" do
           page.driver.accept_modal :confirm, text: "Unsaved changes exist and will be lost if you continue." do
-            fill_in "start_date_filter", with: (Date.current - 9).strftime('%Y-%m-%d')
+            find('#start_date_filter').click
+            select_date_from_datepicker Time.zone.today - 9.days
           end
           expect(page).to have_no_selector "#save-bar"
           within("tr#li_#{li2.id} td.quantity") do
@@ -504,7 +507,8 @@ feature '
 
         it "shows a dialog and keeps changes when confirm dialog is rejected" do
           page.driver.dismiss_modal :confirm, text: "Unsaved changes exist and will be lost if you continue." do
-            fill_in "start_date_filter", with: (Date.current - 9).strftime("%F %T")
+            find('#start_date_filter').click
+            select_date_from_datepicker Time.zone.today - 9.days
           end
           expect(page).to have_selector "#save-bar"
           within("tr#li_#{li2.id} td.quantity") do
@@ -719,11 +723,11 @@ feature '
     let!(:line_item_not_distributed) { create(:line_item_with_shipment, order: o2, product: create(:product, supplier: s1) ) }
 
     before(:each) do
-      @enterprise_user = create_enterprise_user
+      @enterprise_user = create(:user)
       @enterprise_user.enterprise_roles.build(enterprise: s1).save
       @enterprise_user.enterprise_roles.build(enterprise: d1).save
 
-      quick_login_as @enterprise_user
+      login_as @enterprise_user
     end
 
     it "displays a Bulk Management Tab under the Orders item" do
@@ -744,14 +748,5 @@ feature '
   def visit_bulk_order_management
     visit spree.admin_bulk_order_management_path
     expect(page).to have_no_text 'Loading orders'
-  end
-
-  def select_date(date)
-    # Wait for datepicker to open and be associated to the datepicker trigger.
-    expect(page).to have_selector("#ui-datepicker-div")
-
-    navigate_datepicker_to_month date
-
-    find('#ui-datepicker-div .ui-datepicker-calendar .ui-state-default', text: date.strftime("%e").to_s.strip, exact_text: true).click
   end
 end

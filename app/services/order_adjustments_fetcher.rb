@@ -1,7 +1,7 @@
 # This class allows orders with eager-loaded adjustment objects to calculate various adjustment
 # types without triggering additional queries.
 #
-# For example; `order.adjustments.shipping.sum(&:amount)` would normally trigger a new query
+# For example; `order.adjustments.shipping.sum(:amount)` would normally trigger a new query
 # regardless of whether or not adjustments have been preloaded, as `#shipping` is an adjustment
 # scope, eg; `scope :shipping, where(originator_type: 'Spree::ShippingMethod')`.
 #
@@ -57,11 +57,12 @@ class OrderAdjustmentsFetcher
     if adjustments_eager_loaded?
       adjustment_scope = public_send("#{scope}_scope")
 
+      # Adjustments are already loaded here, this block is using `Array#select`
       adjustments.select do |adjustment|
-        match_by_scope(adjustment, adjustment_scope)
+        match_by_scope(adjustment, adjustment_scope) && match_by_scope(adjustment, eligible_scope)
       end
     else
-      adjustments.scoped.public_send scope
+      adjustments.where(nil).eligible.public_send scope
     end
   end
 

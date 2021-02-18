@@ -1,14 +1,38 @@
-require 'open_food_network/referer_parser'
+# frozen_string_literal: true
+
 require_dependency 'spree/authentication_helpers'
+require "application_responder"
+require 'cancan'
+require 'spree/core/controller_helpers/auth'
+require 'spree/core/controller_helpers/respond_with'
+require 'spree/core/controller_helpers/ssl'
+require 'spree/core/controller_helpers/common'
+require 'open_food_network/referer_parser'
 
 class ApplicationController < ActionController::Base
+  self.responder = ApplicationResponder
+  respond_to :html
+
   protect_from_forgery
 
-  prepend_before_filter :restrict_iframes
-  before_filter :set_cache_headers # prevent cart emptying via cache when using back button #1213
+  include Spree::Core::ControllerHelpers::Auth
+  include Spree::Core::ControllerHelpers::RespondWith
+  include Spree::Core::ControllerHelpers::SSL
+  include Spree::Core::ControllerHelpers::Common
+
+  prepend_before_action :restrict_iframes
+  before_action :set_cache_headers # prevent cart emptying via cache when using back button #1213
 
   include EnterprisesHelper
   include Spree::AuthenticationHelpers
+
+  # Helper for debugging strong_parameters
+  rescue_from ActiveModel::ForbiddenAttributesError, with: :print_params
+  def print_params
+    raise ActiveModel::ForbiddenAttributesError, params.to_s
+  end
+
+  respond_to :html
 
   def redirect_to(options = {}, response_status = {})
     ::Rails.logger.error("Redirected by #{begin
@@ -56,10 +80,14 @@ class ApplicationController < ActionController::Base
   end
 
   def after_sign_out_path_for(_resource_or_scope)
-    session[:shopfront_redirect] || main_app.root_path
+    shopfront_redirect || main_app.root_path
   end
 
   private
+
+  def shopfront_redirect
+    session[:shopfront_redirect]
+  end
 
   def restrict_iframes
     response.headers['X-Frame-Options'] = 'DENY'
@@ -93,8 +121,7 @@ class ApplicationController < ActionController::Base
     if current_distributor_closed?
       current_order.empty!
       current_order.set_distribution! nil, nil
-      flash[:info] = "The hub you have selected is temporarily closed for orders. "\
-        "Please try again later."
+      flash[:info] = I18n.t('order_cycles_closed_for_hub')
       redirect_to main_app.root_url
     end
   end
@@ -108,10 +135,9 @@ class ApplicationController < ActionController::Base
 
   def check_order_cycle_expiry
     if current_order_cycle.andand.closed?
-      session[:expired_order_cycle_id] = current_order_cycle.id
       current_order.empty!
       current_order.set_order_cycle! nil
-      flash[:info] = "The order cycle you've selected has just closed. Please try again!"
+      flash[:info] = I18n.t('order_cycle_closed')
       redirect_to main_app.root_url
     end
   end
@@ -128,9 +154,12 @@ class ApplicationController < ActionController::Base
     nil
   end
 
-  def set_cache_headers # https://jacopretorius.net/2014/01/force-page-to-reload-on-browser-back-in-rails.html
+  # See https://jacopretorius.net/2014/01/force-page-to-reload-on-browser-back-in-rails.html
+  def set_cache_headers
     response.headers["Cache-Control"] = "no-cache, no-store, max-age=0, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "Fri, 01 Jan 1990 00:00:00 GMT"
   end
 end
+
+require 'spree/i18n/initializer'

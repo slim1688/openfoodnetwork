@@ -11,8 +11,6 @@ class Calculator::FlatPercentPerItem < Spree::Calculator
 
   preference :flat_percent, :decimal, default: 0
 
-  attr_accessible :preferred_flat_percent
-
   localize_number :preferred_flat_percent
 
   def self.description
@@ -20,7 +18,7 @@ class Calculator::FlatPercentPerItem < Spree::Calculator
   end
 
   def compute(object)
-    line_items_for(object).sum do |li|
+    line_items_for(object).to_a.sum do |li|
       unless li.price.present? && li.quantity.present?
         raise ArgumentError, "object must respond to #price and #quantity"
       end

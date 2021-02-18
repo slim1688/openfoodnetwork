@@ -3,9 +3,9 @@
     %meta{charset: 'utf-8'}/
     %meta{name: 'viewport', content: "width=device-width,initial-scale=1.0"}/
 
-    %title= content_for?(:title) ? "#{yield(:title)} - #{Spree::Config[:site_name]}" : "#{t(:welcome_to)} #{Spree::Config[:site_name]}"
+    %title= content_for?(:title) ? "#{yield(:title)} - #{Spree::Config[:site_name]}".html_safe : "#{t(:welcome_to)} #{Spree::Config[:site_name]}"
     - if Rails.env.production?
-      = favicon_link_tag
+      = favicon_link_tag "/favicon.ico"
     - else
       = favicon_link_tag "/favicon-staging.ico"
     %link{href: "https://fonts.googleapis.com/css?family=Roboto:400,300italic,400italic,300,700,700italic|Oswald:300,400,700", rel: "stylesheet", type: "text/css"}
@@ -13,7 +13,7 @@
     = stylesheet_link_tag "darkswarm/all"
     = csrf_meta_tags
 
-  %body.off-canvas{"ng-app" => "Darkswarm", style: 'background-image: url("/assets/tile-wide.png")' }
+  %body.off-canvas{"ng-app" => "Darkswarm", style: "background-image: url(#{image_path('tile-wide.png')})" }
     / [if lte IE 8]
       = render partial: "shared/ie_warning"
       = javascript_include_tag "iehack"

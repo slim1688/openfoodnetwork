@@ -1,7 +1,11 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Spree::UsersController, type: :controller do
-  include AuthenticationWorkflow
+  routes { Spree::Core::Engine.routes }
+
+  include AuthenticationHelper
 
   describe "show" do
     let!(:u1) { create(:user) }
@@ -22,7 +26,7 @@ describe Spree::UsersController, type: :controller do
     end
 
     it "returns orders placed by the user at normal shops" do
-      spree_get :show
+      get :show
 
       expect(orders).to include d1o1, d1o2
       expect(orders).to_not include d1_order_for_u2, d1o3, d2o1
@@ -38,18 +42,36 @@ describe Spree::UsersController, type: :controller do
       # Doesn't return uncompleted orders" do
       expect(orders).not_to include d1o3
     end
+
+    context 'when the customer_balance feature is enabled' do
+      let(:outstanding_balance) { double(:outstanding_balance) }
+
+      before do
+        allow(OpenFoodNetwork::FeatureToggle)
+          .to receive(:enabled?).with(:customer_balance, controller.spree_current_user) { true }
+      end
+
+      it 'calls OutstandingBalance' do
+        allow(OutstandingBalance).to receive(:new).and_return(outstanding_balance)
+        expect(outstanding_balance).to receive(:query) { Spree::Order.none }
+
+        spree_get :show
+      end
+    end
   end
 
   describe "registered_email" do
+    routes { Openfoodnetwork::Application.routes }
+
     let!(:user) { create(:user) }
 
     it "returns true if email corresponds to a registered user" do
-      spree_post :registered_email, email: user.email
+      post :registered_email, email: user.email
       expect(json_response['registered']).to eq true
     end
 
     it "returns false if email does not correspond to a registered user" do
-      spree_post :registered_email, email: 'nonregistereduser@example.com'
+      post :registered_email, email: 'nonregistereduser@example.com'
       expect(json_response['registered']).to eq false
     end
   end
@@ -57,14 +79,14 @@ describe Spree::UsersController, type: :controller do
   context '#load_object' do
     it 'should redirect to signup path if user is not found' do
       allow(controller).to receive_messages(spree_current_user: nil)
-      spree_put :update, user: { email: 'foobar@example.com' }
+      put :update, user: { email: 'foobar@example.com' }
       expect(response).to redirect_to('/login')
     end
   end
 
   context '#create' do
     it 'should create a new user' do
-      spree_post :create, user: { email: 'foobar@example.com', password: 'foobar123', password_confirmation: 'foobar123' }
+      post :create, user: { email: 'foobar@example.com', password: 'foobar123', password_confirmation: 'foobar123' }
       expect(assigns[:user].new_record?).to be_falsey
     end
   end

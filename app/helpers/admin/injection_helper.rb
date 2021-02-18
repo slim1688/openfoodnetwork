@@ -130,10 +130,6 @@ module Admin
                                                             json: @hub_permissions.to_json }
     end
 
-    def admin_inject_products
-      admin_inject_json_ams_array "ofn.admin", "products", @products, Api::Admin::ProductSerializer
-    end
-
     def admin_inject_tax_categories(opts = { module: 'ofn.admin' })
       admin_inject_json_ams_array opts[:module],
                                   "tax_categories",
@@ -182,6 +178,12 @@ module Admin
              locals: { ngModule: 'admin.indexUtils',
                        name: 'SpreeApiKey',
                        json: "'#{@spree_api_key}'" }
+    end
+
+    def admin_inject_available_units
+      admin_inject_json "admin.products",
+                        "availableUnits",
+                        Spree::Config.available_units
     end
 
     def admin_inject_json(ng_module, name, data)

@@ -1,13 +1,17 @@
 module Api
   class OrderCyclesController < Api::BaseController
     include EnterprisesHelper
-    respond_to :json
+    include ApiActionCaching
 
     skip_authorization_check
-    skip_before_filter :authenticate_user, :ensure_api_key, only: [:taxons, :properties]
+    skip_before_action :authenticate_user, :ensure_api_key, only: [:taxons, :properties]
+
+    caches_action :taxons, :properties,
+                  expires_in: CacheService::FILTERS_EXPIRY,
+                  cache_path: proc { |controller| controller.request.url }
 
     def products
-      render_no_products unless order_cycle.open?
+      return render_no_products unless order_cycle.open?
 
       products = ProductsRenderer.new(
         distributor,
@@ -16,7 +20,7 @@ module Api
         search_params
       ).products_json
 
-      render json: products
+      render plain: products
     rescue ProductsRenderer::NoProducts
       render_no_products
     end
@@ -27,19 +31,21 @@ module Api
         where(spree_products: { id: distributed_products }).
         select('DISTINCT spree_taxons.*')
 
-      render json: ActiveModel::ArraySerializer.new(taxons, each_serializer: Api::TaxonSerializer)
+      render plain: ActiveModel::ArraySerializer.new(
+        taxons, each_serializer: Api::TaxonSerializer
+      ).to_json
     end
 
     def properties
-      render json: ActiveModel::ArraySerializer.new(
+      render plain: ActiveModel::ArraySerializer.new(
         product_properties | producer_properties, each_serializer: Api::PropertySerializer
-      )
+      ).to_json
     end
 
     private
 
     def render_no_products
-      render status: :not_found, json: ''
+      render status: :not_found, json: {}
     end
 
     def product_properties
@@ -71,17 +77,17 @@ module Api
     end
 
     def permitted_ransack_params
-      [:name_or_meta_keywords_or_supplier_name_cont,
+      [:name_or_meta_keywords_or_variants_display_as_or_variants_display_name_or_supplier_name_cont,
        :properties_id_or_supplier_properties_id_in_any,
        :primary_taxon_id_in_any]
     end
 
     def distributor
-      @distributor ||= Enterprise.find_by_id(params[:distributor])
+      @distributor ||= Enterprise.find_by(id: params[:distributor])
     end
 
     def order_cycle
-      @order_cycle ||= OrderCycle.find_by_id(params[:id])
+      @order_cycle ||= OrderCycle.find_by(id: params[:id])
     end
 
     def customer

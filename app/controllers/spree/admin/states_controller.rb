@@ -1,8 +1,8 @@
 module Spree
   module Admin
-    class StatesController < ResourceController
+    class StatesController < ::Admin::ResourceController
       belongs_to 'spree/country'
-      before_filter :load_data
+      before_action :load_data
 
       def index
         respond_with(@collection) do |format|
@@ -14,7 +14,7 @@ module Spree
       protected
 
       def location_after_save
-        admin_country_states_url(@country)
+        spree.admin_country_states_url(@country)
       end
 
       def collection
@@ -23,6 +23,10 @@ module Spree
 
       def load_data
         @countries = Country.order(:name)
+      end
+
+      def permitted_resource_params
+        params.require(:state).permit(:name, :abbr)
       end
     end
   end

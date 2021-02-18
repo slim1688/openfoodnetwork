@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature "Account Settings", js: true do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include OpenFoodNetwork::EmailHelper
 
   describe "as a logged in user" do
@@ -14,30 +16,30 @@ feature "Account Settings", js: true do
 
     before do
       setup_email
-      quick_login_as user
+      login_as user
       visit "/account"
-      click_link I18n.t('spree.users.show.tabs.settings')
+      find("a", :text => %r{#{I18n.t('spree.users.show.tabs.settings')}}i).click
       expect(page).to have_content I18n.t('spree.users.form.account_settings')
     end
 
     it "allows the user to update their email address" do
-      performing_deliveries do
-        fill_in 'user_email', with: 'new@email.com'
+      fill_in 'user_email', with: 'new@email.com'
 
+      performing_deliveries do
         expect do
           click_button I18n.t(:update)
-        end.to send_confirmation_instructions
-
-        sent_mail = ActionMailer::Base.deliveries.last
-        expect(sent_mail.to).to eq ['new@email.com']
-
-        expect(find(".alert-box.success").text.strip).to eq "#{I18n.t('spree.account_updated')} ×"
-        user.reload
-        expect(user.email).to eq 'old@email.com'
-        expect(user.unconfirmed_email).to eq 'new@email.com'
-        click_link I18n.t('spree.users.show.tabs.settings')
-        expect(page).to have_content I18n.t('spree.users.show.unconfirmed_email', unconfirmed_email: 'new@email.com')
+        end.to enqueue_job ActionMailer::DeliveryJob
       end
+
+      expect(enqueued_jobs.last.to_s).to match "new@email.com"
+
+      expect(find(".alert-box.success").text.strip).to eq "#{I18n.t('spree.account_updated')}\n×"
+      user.reload
+      expect(user.email).to eq 'old@email.com'
+      expect(user.unconfirmed_email).to eq 'new@email.com'
+      find("a", :text => %r{#{I18n.t('spree.users.show.tabs.settings')}}i).click
+      expect(page).to have_content I18n.t('spree.users.show.unconfirmed_email',
+                                          unconfirmed_email: 'new@email.com')
     end
 
     it "allows the user to change their password" do
@@ -47,7 +49,7 @@ feature "Account Settings", js: true do
       fill_in 'user_password_confirmation', with: 'NewPassword'
 
       click_button I18n.t(:update)
-      expect(find(".alert-box.success").text.strip).to eq "#{I18n.t('spree.account_updated')} ×"
+      expect(find(".alert-box.success").text.strip).to eq "#{I18n.t('spree.account_updated')}\n×"
 
       expect(user.reload.encrypted_password).to_not eq initial_password
     end

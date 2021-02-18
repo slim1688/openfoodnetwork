@@ -29,7 +29,7 @@ angular.module("admin.enterprises")
     # from a directive "nav-check" in the page - if we pass it here it will be called in the test suite,
     # and on all new uses of this contoller, and we might not want that.
     enterpriseNavCallback = ->
-      if $scope.enterprise_form != undefined && $scope.enterprise_form.$dirty
+      if $scope.enterprise_form?.$dirty
         t('admin.unsaved_confirm_leave')
 
     # Register the NavigationCheck callback
@@ -69,25 +69,24 @@ angular.module("admin.enterprises")
       $scope.newUser = $scope.invite_errors = $scope.invite_success = null
 
     $scope.removeLogo = ->
-      return unless confirm(t("admin.enterprises.remove_logo.immediate_removal_warning"))
-
-      Enterprises.removeLogo($scope.Enterprise).then (data) ->
-        $scope.Enterprise = angular.copy(data)
-        $scope.$emit("enterprise:updated", $scope.Enterprise)
-
-        StatusMessage.display("success", t("admin.enterprises.remove_logo.removed_successfully"))
-      , (response) ->
-        if response.data.error?
-          StatusMessage.display("failure", response.data.error)
+      $scope.performEnterpriseAction("removeLogo", "immediate_logo_removal_warning", "removed_logo_successfully")
 
     $scope.removePromoImage = ->
-      return unless confirm(t("admin.enterprises.remove_promo_image.immediate_removal_warning"))
+      $scope.performEnterpriseAction("removePromoImage", "immediate_promo_image_removal_warning", "removed_promo_image_successfully")
 
-      Enterprises.removePromoImage($scope.Enterprise).then (data) ->
+    $scope.removeTermsAndConditions = ->
+      $scope.performEnterpriseAction("removeTermsAndConditions", "immediate_terms_and_conditions_removal_warning", "removed_terms_and_conditions_successfully")
+
+    $scope.performEnterpriseAction = (enterpriseActionName, warning_message_key, success_message_key) ->
+      return unless confirm($scope.translation(warning_message_key))
+
+      Enterprises[enterpriseActionName]($scope.Enterprise).then (data) ->
         $scope.Enterprise = angular.copy(data)
         $scope.$emit("enterprise:updated", $scope.Enterprise)
-
-        StatusMessage.display("success", t("admin.enterprises.remove_promo_image.removed_successfully"))
+        StatusMessage.display("success", $scope.translation(success_message_key))
       , (response) ->
         if response.data.error?
           StatusMessage.display("failure", response.data.error)
+
+    $scope.translation = (key) ->
+      t('js.admin.enterprises.form.images.' + key)

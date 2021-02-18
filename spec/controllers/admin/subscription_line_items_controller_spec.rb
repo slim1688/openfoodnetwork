@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Admin::SubscriptionLineItemsController, type: :controller do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
 
   describe "build" do
     let(:user) { create(:user) }

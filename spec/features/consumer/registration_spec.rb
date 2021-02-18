@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature "Registration", js: true do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include WebHelper
 
   describe "Registering a Profile" do
@@ -10,9 +12,9 @@ feature "Registration", js: true do
     before do
       Spree::Config.enterprises_require_tos = false
 
-      albania = Spree::Country.create!({ name: "Albania", iso3: "ALB", iso: "AL", iso_name: "ALBANIA", numcode: "8" }, without_protection: true)
-      Spree::State.create!({ name: "Berat", abbr: "BRA", country: albania }, without_protection: true)
-      Spree::Country.create!({ name: "Chad", iso3: "TCD", iso: "TD", iso_name: "CHAD", numcode: "148" }, without_protection: true)
+      albania = Spree::Country.create!({ name: "Albania", iso3: "ALB", iso: "AL", iso_name: "ALBANIA", numcode: "8" })
+      Spree::State.create!({ name: "Berat", abbr: "BRA", country: albania })
+      Spree::Country.create!({ name: "Chad", iso3: "TCD", iso: "TD", iso_name: "CHAD", numcode: "148" })
     end
 
     after do
@@ -40,7 +42,7 @@ feature "Registration", js: true do
       expect(URI.parse(current_url).path).to eq registration_path
 
       # Done reading introduction
-      page.has_content?
+      expect(page).to have_text "What do I get?"
       click_button "Let's get started!"
       expect(page).to have_content 'Woot!'
 
@@ -51,7 +53,7 @@ feature "Registration", js: true do
       fill_in 'enterprise_address', with: '123 Abc Street'
       fill_in 'enterprise_city', with: 'Northcote'
       fill_in 'enterprise_zipcode', with: '3070'
-      expect(page).to have_select('enterprise_country', options: %w(Albania Australia), selected: 'Australia')
+      expect(page).to have_select('enterprise_country', options: ["Albania", "Australia"], selected: 'Australia')
       select 'Vic', from: 'enterprise_state'
       click_button "Continue"
       expect(page).to have_content 'Who is responsible for managing My Awesome Enterprise?'
@@ -72,7 +74,7 @@ feature "Registration", js: true do
       expect(page).to have_content 'Nice one!'
 
       # Enterprise should be created
-      e = Enterprise.find_by_name('My Awesome Enterprise')
+      e = Enterprise.find_by(name: 'My Awesome Enterprise')
       expect(e.address.address1).to eq "123 Abc Street"
       expect(e.sells).to eq "unspecified"
       expect(e.is_primary_producer).to eq true
@@ -124,11 +126,15 @@ feature "Registration", js: true do
 
       click_link "Go to Enterprise Dashboard"
       expect(page).to have_content "CHOOSE YOUR PACKAGE"
+
+      page.find('.full_hub h3').click
+      click_button "Select and Continue"
+      expect(page).to have_content "Your profile live"
     end
 
     context "when the user has no more remaining enterprises" do
       before do
-        user.update_attributes(enterprise_limit: 0)
+        user.update(enterprise_limit: 0)
       end
 
       it "displays the limit reached page" do
@@ -150,7 +156,7 @@ feature "Registration", js: true do
     let!(:user2) { create(:user) }
 
     before do
-      quick_login_as user2
+      login_as user2
     end
 
     context "if accepting Terms of Service is not required" do

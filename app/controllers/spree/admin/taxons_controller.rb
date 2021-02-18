@@ -15,9 +15,9 @@ module Spree
           respond_with(@taxon) do |format|
             format.html do
               if redirect_to @taxonomy
-                edit_admin_taxonomy_url(@taxonomy)
+                spree.edit_admin_taxonomy_url(@taxonomy)
               else
-                admin_taxonomies_url
+                spree.admin_taxonomies_url
               end
             end
           end
@@ -61,7 +61,12 @@ module Spree
             @taxon.move_to_right_of(new_siblings[new_position - 1]) # we move down
           end
           # Reset legacy position, if any extensions still rely on it
-          new_parent.children.reload.each{ |t| t.update_column(:position, t.position) }
+          new_parent.children.reload.each do |t|
+            t.update_columns(
+              position: t.position,
+              updated_at: Time.zone.now
+            )
+          end
 
           if parent_id
             @taxon.reload
@@ -81,7 +86,7 @@ module Spree
           @update_children = true
         end
 
-        if @taxon.update_attributes(params[:taxon])
+        if @taxon.update(taxon_params)
           flash[:success] = flash_message_for(@taxon, :successfully_updated)
         end
 
@@ -95,7 +100,7 @@ module Spree
         end
 
         respond_with(@taxon) do |format|
-          format.html { redirect_to edit_admin_taxonomy_url(@taxonomy) }
+          format.html { redirect_to spree.edit_admin_taxonomy_url(@taxonomy) }
           format.json { render json: @taxon.to_json }
         end
       end
@@ -104,6 +109,15 @@ module Spree
         @taxon = Taxon.find(params[:id])
         @taxon.destroy
         respond_with(@taxon) { |format| format.json { render json: '' } }
+      end
+
+      private
+
+      def taxon_params
+        params.require(:taxon).permit(
+          :name, :parent_id, :position, :icon, :description, :permalink,
+          :taxonomy_id, :meta_description, :meta_keywords, :meta_title
+        )
       end
     end
   end

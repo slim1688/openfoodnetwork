@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature 'Schedules', js: true do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   include WebHelper
 
   context "as an enterprise user" do
@@ -16,7 +18,7 @@ feature 'Schedules', js: true do
     let!(:oc5) { create(:simple_order_cycle, coordinator: managed_enterprise2, name: 'oc5') }
     let!(:weekly_schedule) { create(:schedule, name: 'Weekly', order_cycles: [oc1, oc2, oc3, oc4]) }
 
-    before { quick_login_as user }
+    before { login_as user }
 
     describe "Adding a new Schedule" do
       it "immediately shows the schedule in the order cycle list once created" do
@@ -128,11 +130,11 @@ feature 'Schedules', js: true do
           expect(page).to have_no_selector "a", text: "Weekly"
         end
 
-        expect(Schedule.find_by_id(weekly_schedule.id)).to be_nil
-        expect(oc1.schedules).to eq []
-        expect(oc2.schedules).to eq []
-        expect(oc3.schedules).to eq []
-        expect(oc4.schedules).to eq []
+        expect(Schedule.find_by(id: weekly_schedule.id)).to be_nil
+        expect(oc1.reload.schedules).to eq []
+        expect(oc2.reload.schedules).to eq []
+        expect(oc3.reload.schedules).to eq []
+        expect(oc4.reload.schedules).to eq []
       end
     end
   end

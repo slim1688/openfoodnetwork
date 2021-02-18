@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'simplecov'
 SimpleCov.start 'rails'
 
@@ -20,12 +22,20 @@ require 'rspec/rails'
 require 'capybara'
 require 'database_cleaner'
 require 'rspec/retry'
+require 'coverage_helper'
 require 'paper_trail/frameworks/rspec'
 
 require 'webdrivers'
 
-# Allow connections to phantomjs/selenium whilst raising errors
-# when connecting to external sites
+require 'shoulda/matchers'
+Shoulda::Matchers.configure do |config|
+  config.integrate do |with|
+    with.test_framework :rspec
+    with.library :rails
+  end
+end
+
+# Allow connections to selenium whilst raising errors when connecting to external sites
 require 'webmock/rspec'
 WebMock.enable!
 WebMock.disable_net_connect!(
@@ -35,17 +45,13 @@ WebMock.disable_net_connect!(
 
 # Requires supporting ruby files with custom matchers and macros, etc,
 # in spec/support/ and its subdirectories.
-Dir[Rails.root.join("spec/support/**/*.rb")].each { |f| require f }
-require 'spree/testing_support/controller_requests'
-require 'spree/testing_support/capybara_ext'
-require 'spree/api/testing_support/setup'
-require 'spree/testing_support/authorization_helpers'
-require 'spree/testing_support/preferences'
+Dir[Rails.root.join("spec/support/**/*.rb")].sort.each { |f| require f }
 require 'support/api_helper'
 
 # Capybara config
 require 'selenium-webdriver'
 Capybara.javascript_driver = :chrome
+Capybara.server = :webrick
 
 Capybara.register_driver :chrome do |app|
   options = Selenium::WebDriver::Chrome::Options.new(
@@ -57,6 +63,11 @@ Capybara.register_driver :chrome do |app|
 end
 
 Capybara.default_max_wait_time = 30
+
+Capybara.configure do |config|
+  config.match = :prefer_exact
+  config.ignore_hidden_elements = true
+end
 
 require "paperclip/matchers"
 
@@ -90,6 +101,10 @@ RSpec.configure do |config|
 
   # Retry
   config.verbose_retry = true
+  # Try twice (retry once)
+  config.default_retry_count = 2
+  # Only retry when Selenium raises Net::ReadTimeout
+  config.exceptions_to_retry = [Net::ReadTimeout]
 
   # Force use of expect (over should)
   config.expect_with :rspec do |expectations|
@@ -108,13 +123,43 @@ RSpec.configure do |config|
     RackRequestBlocker.wait_for_requests_complete
   end
 
-  def restart_phantomjs
+  def restart_driver
     Capybara.send('session_pool').values
       .select { |s| s.driver.is_a?(Capybara::Selenium::Driver) }
       .each { |s| s.driver.reset! }
   end
+  config.before(:all) { restart_driver }
 
-  config.before(:all) { restart_phantomjs }
+  # Enable caching in any specs tagged with `caching: true`. Usage is exactly the same as the
+  # well-known `js: true` tag used to enable javascript in feature specs.
+  config.around(:each, :caching) do |example|
+    caching = ActionController::Base.perform_caching
+    ActionController::Base.perform_caching = example.metadata[:caching]
+    example.run
+    ActionController::Base.perform_caching = caching
+  end
+
+  # Show javascript errors in test output with `js_debug: true`
+  config.after(:each, :js_debug) do
+    errors = page.driver.browser.manage.logs.get(:browser)
+    if errors.present?
+      message = errors.map(&:message).join("\n")
+      puts message
+    end
+  end
+
+  # Webmock raises errors that inherit directly from Exception (not StandardError).
+  # The messages contain useful information for debugging stubbed requests to external
+  # services (in tests), but they normally don't appear in the test output.
+  config.before(:all) do
+    ApplicationController.class_eval do
+      rescue_from WebMock::NetConnectNotAllowedError, with: :handle_webmock_error
+
+      def handle_webmock_error(exception)
+        raise exception.message
+      end
+    end
+  end
 
   # Geocoding
   config.before(:each) { allow_any_instance_of(Spree::Address).to receive(:geocode).and_return([1, 1]) }
@@ -139,10 +184,9 @@ RSpec.configure do |config|
   config.include Spree::UrlHelpers
   config.include Spree::CheckoutHelpers
   config.include Spree::MoneyHelper
-  config.include Spree::TestingSupport::ControllerRequests, type: :controller
-  config.include Spree::TestingSupport::Preferences
-  config.include Devise::TestHelpers, type: :controller
-  config.extend  Spree::Api::TestingSupport::Setup, type: :controller
+  config.include PreferencesHelper
+  config.include ControllerRequestsHelper, type: :controller
+  config.include Devise::Test::ControllerHelpers, type: :controller
   config.include OpenFoodNetwork::ApiHelper, type: :controller
   config.include OpenFoodNetwork::ControllerHelper, type: :controller
   config.include Features::DatepickerHelper, type: :feature
@@ -156,6 +200,7 @@ RSpec.configure do |config|
   config.include OpenFoodNetwork::DelayedJobHelper
   config.include OpenFoodNetwork::PerformanceHelper
   config.include DownloadsHelper, type: :feature
+  config.include ActiveJob::TestHelper
 
   # FactoryBot
   require 'factory_bot_rails'
@@ -185,4 +230,7 @@ RSpec.configure do |config|
   # config.after :suite do
   # PerfTools::CpuProfiler.stop
   # end
+  config.infer_spec_type_from_file_location!
 end
+
+FactoryBot.use_parent_strategy = false

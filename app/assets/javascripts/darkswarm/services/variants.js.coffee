@@ -10,7 +10,6 @@ Darkswarm.factory 'Variants', ->
 
     extend: (variant)->
       variant.extended_name = @extendedVariantName(variant)
-      variant.base_price_percentage = Math.round(variant.price / variant.price_with_fees * 100)
       variant.line_item ||= @lineItemFor(variant) # line_item may have been initialised in Cart#constructor
       variant.line_item.total_price = variant.price_with_fees * variant.line_item.quantity
       variant
@@ -20,10 +19,9 @@ Darkswarm.factory 'Variants', ->
         name = variant.product_name
       else
         name =  "#{variant.product_name} - #{variant.name_to_display}"
-      name += " (#{variant.options_text})" if variant.options_text
       name
 
     lineItemFor: (variant) ->
       variant: variant
-      quantity: null
-      max_quantity: null
+      quantity: 0
+      max_quantity: 0

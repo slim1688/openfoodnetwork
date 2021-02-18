@@ -1,3 +1,7 @@
+# frozen_string_literal: false
+
+require 'spree/core/s3_support'
+
 class Enterprise < ActiveRecord::Base
   SELLS = %w(unspecified none own any).freeze
   ENTERPRISE_SEARCH_RADIUS = 100
@@ -6,18 +10,14 @@ class Enterprise < ActiveRecord::Base
   preference :shopfront_closed_message, :text, default: ""
   preference :shopfront_taxon_order, :string, default: ""
   preference :shopfront_order_cycle_order, :string, default: "orders_close_at"
+  preference :show_customer_names_to_suppliers, :boolean, default: false
 
-  # This is hopefully a temporary measure, pending the arrival of multiple named inventories
-  # for shops. We need this here to allow hubs to restrict visible variants to only those in
-  # their inventory if they so choose
-  # TODO: delegate this to a separate model instead of abusing Preferences.
+  # Allow hubs to restrict visible variants to only those in their inventory
   preference :product_selection_from_inventory_only, :boolean, default: false
 
   has_paper_trail only: [:owner_id, :sells], on: [:update]
 
   self.inheritance_column = nil
-
-  acts_as_gmappable process_geocoding: false
 
   has_many :relationships_as_parent, class_name: 'EnterpriseRelationship',
                                      foreign_key: 'parent_id',
@@ -75,9 +75,15 @@ class Enterprise < ActiveRecord::Base
                     },
                     url: '/images/enterprises/promo_images/:id/:style/:basename.:extension',
                     path: 'public/images/enterprises/promo_images/:id/:style/:basename.:extension'
-
   validates_attachment_content_type :logo, content_type: %r{\Aimage/.*\Z}
   validates_attachment_content_type :promo_image, content_type: %r{\Aimage/.*\Z}
+
+  has_attached_file :terms_and_conditions,
+                    url: '/files/enterprises/terms_and_conditions/:id/:basename.:extension',
+                    path: 'public/files/enterprises/terms_and_conditions/:id/:basename.:extension'
+  validates_attachment_content_type :terms_and_conditions,
+                                    content_type: "application/pdf",
+                                    message: I18n.t(:enterprise_terms_and_conditions_type_error)
 
   include Spree::Core::S3Support
   supports_s3 :logo
@@ -93,9 +99,9 @@ class Enterprise < ActiveRecord::Base
   validate :enforce_ownership_limit, if: lambda { owner_id_changed? && !owner_id.nil? }
 
   before_validation :initialize_permalink, if: lambda { permalink.nil? }
-  before_validation :ensure_owner_is_manager, if: lambda { owner_id_changed? && !owner_id.nil? }
   before_validation :set_unused_address_fields
   after_validation :geocode_address
+  after_validation :ensure_owner_is_manager, if: lambda { owner_id_changed? && !owner_id.nil? }
 
   after_touch :touch_distributors
   after_create :set_default_contact
@@ -120,13 +126,13 @@ class Enterprise < ActiveRecord::Base
       except(:select).
       select('DISTINCT enterprises.id')
 
-    if ready_enterprises.present?
+    if ready_enterprises.any?
       where("enterprises.id NOT IN (?)", ready_enterprises)
     else
-      where("TRUE")
+      where(nil)
     end
   }
-  scope :is_primary_producer, -> { where(is_primary_producer: true) }
+  scope :is_primary_producer, -> { where("enterprises.is_primary_producer IS TRUE") }
   scope :is_distributor, -> { where('sells != ?', 'none') }
   scope :is_hub, -> { where(sells: 'any') }
   scope :supplying_variant_in, lambda { |variants|
@@ -182,7 +188,7 @@ class Enterprise < ActiveRecord::Base
 
   scope :managed_by, lambda { |user|
     if user.has_spree_role?('admin')
-      scoped
+      where(nil)
     else
       joins(:enterprise_roles).where('enterprise_roles.user_id = ?', user.id)
     end
@@ -394,7 +400,7 @@ class Enterprise < ActiveRecord::Base
   end
 
   def send_welcome_email
-    Delayed::Job.enqueue WelcomeEnterpriseJob.new(id)
+    EnterpriseMailer.welcome(self).deliver_later
   end
 
   def strip_url(url)
@@ -464,6 +470,8 @@ class Enterprise < ActiveRecord::Base
   end
 
   def initialize_permalink
+    return unless name
+
     self.permalink = Enterprise.find_available_permalink(name)
   end
 

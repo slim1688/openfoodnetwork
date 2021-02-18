@@ -1,21 +1,22 @@
-require 'spree/core/controller_helpers/respond_with_decorator'
+# frozen_string_literal: true
+
+require 'spree/core/controller_helpers/order'
+require 'spree/core/controller_helpers/ssl'
 require 'open_food_network/tag_rule_applicator'
 
 class BaseController < ApplicationController
-  include Spree::Core::ControllerHelpers
-  include Spree::Core::ControllerHelpers::Auth
-  include Spree::Core::ControllerHelpers::Common
+  layout 'darkswarm'
+
   include Spree::Core::ControllerHelpers::Order
-  include Spree::Core::ControllerHelpers::RespondWith
+  include Spree::Core::ControllerHelpers::SSL
 
   include I18nHelper
-  include EnterprisesHelper
   include OrderCyclesHelper
 
   helper 'spree/base'
 
-  before_filter :set_locale
-  before_filter :check_order_cycle_expiry
+  before_action :set_locale
+  before_action :check_order_cycle_expiry
 
   private
 

@@ -1,40 +1,44 @@
 module Api
-  class EnterprisesController < BaseController
-    before_filter :override_owner, only: [:create, :update]
-    before_filter :check_type, only: :update
-    before_filter :override_sells, only: [:create, :update]
-    before_filter :override_visible, only: [:create, :update]
+  class EnterprisesController < Api::BaseController
+    before_action :override_owner, only: [:create, :update]
+    before_action :check_type, only: :update
+    before_action :override_sells, only: [:create, :update]
+    before_action :override_visible, only: [:create, :update]
     respond_to :json
 
     def create
       authorize! :create, Enterprise
 
-      @enterprise = Enterprise.new(params[:enterprise])
+      # params[:user_ids] breaks the enterprise creation
+      # We remove them from params and save them after creating the enterprise
+      user_ids = params[:enterprise].delete(:user_ids)
+      @enterprise = Enterprise.new(enterprise_params)
       if @enterprise.save
-        render text: @enterprise.id, status: :created
+        @enterprise.user_ids = user_ids
+        render json: @enterprise.id, status: :created
       else
         invalid_resource!(@enterprise)
       end
     end
 
     def update
-      @enterprise = Enterprise.find_by_permalink(params[:id]) || Enterprise.find(params[:id])
+      @enterprise = Enterprise.find_by(permalink: params[:id]) || Enterprise.find(params[:id])
       authorize! :update, @enterprise
 
-      if @enterprise.update_attributes(params[:enterprise])
-        render text: @enterprise.id, status: :ok
+      if @enterprise.update(enterprise_params)
+        render json: @enterprise.id, status: :ok
       else
         invalid_resource!(@enterprise)
       end
     end
 
     def update_image
-      @enterprise = Enterprise.find_by_permalink(params[:id]) || Enterprise.find(params[:id])
+      @enterprise = Enterprise.find_by(permalink: params[:id]) || Enterprise.find(params[:id])
       authorize! :update, @enterprise
 
-      if params[:logo] && @enterprise.update_attributes( logo: params[:logo] )
+      if params[:logo] && @enterprise.update( logo: params[:logo] )
         render text: @enterprise.logo.url(:medium), status: :ok
-      elsif params[:promo] && @enterprise.update_attributes( promo_image: params[:promo] )
+      elsif params[:promo] && @enterprise.update( promo_image: params[:promo] )
         render text: @enterprise.promo_image.url(:medium), status: :ok
       else
         invalid_resource!(@enterprise)
@@ -64,6 +68,10 @@ module Api
 
     def override_visible
       params[:enterprise][:visible] = false
+    end
+
+    def enterprise_params
+      PermittedAttributes::Enterprise.new(params).call
     end
   end
 end

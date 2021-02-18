@@ -1,8 +1,8 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Admin::BulkLineItemsController, type: :controller do
-  include AuthenticationWorkflow
-
   describe '#index' do
     render_views
 
@@ -17,11 +17,11 @@ describe Admin::BulkLineItemsController, type: :controller do
     let!(:line_item4) { FactoryBot.create(:line_item_with_shipment, order: order3) }
 
     context "as a normal user" do
-      before { allow(controller).to receive_messages spree_current_user: create_enterprise_user }
+      before { allow(controller).to receive_messages spree_current_user: create(:user) }
 
       it "should deny me access to the index action" do
-        spree_get :index, format: :json
-        expect(response).to redirect_to spree.unauthorized_path
+        get :index, format: :json
+        expect(response).to redirect_to unauthorized_path
       end
     end
 
@@ -32,7 +32,7 @@ describe Admin::BulkLineItemsController, type: :controller do
 
       context "when no ransack params are passed in" do
         before do
-          spree_get :index, format: :json
+          get :index, format: :json
         end
 
         it "retrieves a list of line_items with appropriate attributes, including line items with appropriate attributes" do
@@ -56,7 +56,7 @@ describe Admin::BulkLineItemsController, type: :controller do
 
       context "when ransack params are passed in for line items" do
         before do
-          spree_get :index, format: :json, q: { order_id_eq: order2.id }
+          get :index, format: :json, q: { order_id_eq: order2.id }
         end
 
         it "retrives a list of line items which match the criteria" do
@@ -66,7 +66,7 @@ describe Admin::BulkLineItemsController, type: :controller do
 
       context "when ransack params are passed in for orders" do
         before do
-          spree_get :index, format: :json, q: { order: { completed_at_gt: 2.hours.ago } }
+          get :index, format: :json, q: { order: { completed_at_gt: 2.hours.ago } }
         end
 
         it "retrives a list of line items whose orders match the criteria" do
@@ -90,18 +90,18 @@ describe Admin::BulkLineItemsController, type: :controller do
       context "producer enterprise" do
         before do
           allow(controller).to receive_messages spree_current_user: supplier.owner
-          spree_get :index, format: :json
+          get :index, format: :json
         end
 
         it "does not display line items for which my enterprise is a supplier" do
-          expect(response).to redirect_to spree.unauthorized_path
+          expect(response).to redirect_to unauthorized_path
         end
       end
 
       context "coordinator enterprise" do
         before do
           allow(controller).to receive_messages spree_current_user: coordinator.owner
-          spree_get :index, format: :json
+          get :index, format: :json
         end
 
         it "retrieves a list of line_items" do
@@ -113,7 +113,7 @@ describe Admin::BulkLineItemsController, type: :controller do
       context "hub enterprise" do
         before do
           allow(controller).to receive_messages spree_current_user: distributor1.owner
-          spree_get :index, format: :json
+          get :index, format: :json
         end
 
         it "retrieves a list of line_items" do
@@ -130,7 +130,7 @@ describe Admin::BulkLineItemsController, type: :controller do
 
       context "with pagination args" do
         it "returns paginated results" do
-          spree_get :index, { page: 1, per_page: 2 }, format: :json
+          get :index, { page: 1, per_page: 2 }, format: :json
 
           expect(line_item_ids).to eq [line_item1.id, line_item2.id]
           expect(json_response['pagination']).to eq(
@@ -139,7 +139,7 @@ describe Admin::BulkLineItemsController, type: :controller do
         end
 
         it "returns paginated results for a second page" do
-          spree_get :index, { page: 2, per_page: 2 }, format: :json
+          get :index, { page: 2, per_page: 2 }, format: :json
 
           expect(line_item_ids).to eq [line_item3.id, line_item4.id]
           expect(json_response['pagination']).to eq(
@@ -172,7 +172,7 @@ describe Admin::BulkLineItemsController, type: :controller do
         end
 
         it "does not allow access" do
-          expect(response).to redirect_to spree.unauthorized_path
+          expect(response).to redirect_to unauthorized_path
         end
       end
 
@@ -197,7 +197,7 @@ describe Admin::BulkLineItemsController, type: :controller do
 
           it "returns an empty JSON response" do
             spree_put :update, params
-            expect(response.body).to eq ' '
+            expect(response.body).to eq ""
           end
 
           it 'returns a 204 response' do
@@ -275,7 +275,7 @@ describe Admin::BulkLineItemsController, type: :controller do
 
       it 'returns an empty JSON response' do
         spree_delete :destroy, params
-        expect(response.body).to eq ' '
+        expect(response.body).to eq ""
       end
 
       it 'returns a 204 response' do

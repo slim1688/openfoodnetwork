@@ -1,11 +1,13 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 feature '
     As an administrator
     I want to manage enterprises
 ' do
-  include AuthenticationWorkflow
   include WebHelper
+  include AuthenticationHelper
 
   scenario "viewing an enterprise" do
     e = create(:enterprise)
@@ -25,7 +27,7 @@ feature '
     enterprise_fee = create(:enterprise_fee)
 
     # Navigating
-    admin = quick_login_as_admin
+    admin = login_as_admin
     visit '/admin/enterprises'
     click_link 'New Enterprise'
 
@@ -66,7 +68,7 @@ feature '
     enterprise_fee = create(:enterprise_fee, enterprise: @enterprise )
     user = create(:user)
 
-    admin = quick_login_as_admin
+    admin = login_as_admin
 
     visit '/admin/enterprises'
     within "tr.enterprise-#{@enterprise.id}" do
@@ -125,7 +127,7 @@ feature '
     expect(page).to have_selector "#payment_methods"
     expect(page).to have_selector "#shipping_methods"
 
-    multi_select2_select eg1.name, from: 'enterprise_group_ids'
+    select2_select eg1.name, from: 'enterprise_group_ids'
 
     accept_alert do
       click_link "Payment Methods"
@@ -219,8 +221,7 @@ feature '
       s = create(:supplier_enterprise)
 
       # When I go to its properties page
-      quick_login_as_admin
-      visit admin_enterprises_path
+      login_as_admin_and_visit admin_enterprises_path
       within(".enterprise-#{s.id}") { click_link 'Properties' }
 
       # And I create a property
@@ -243,8 +244,7 @@ feature '
       s.producer_properties.create! property_name: 'Certified Organic', value: 'NASAA 12345'
 
       # When I go to its properties page
-      quick_login_as_admin
-      visit main_app.admin_enterprise_producer_properties_path(s)
+      login_as_admin_and_visit main_app.admin_enterprise_producer_properties_path(s)
 
       # And I update the property
       fill_in 'enterprise_producer_properties_attributes_0_property_name', with: "Biodynamic"
@@ -266,8 +266,7 @@ feature '
       pp = s.producer_properties.create! property_name: 'Certified Organic', value: 'NASAA 12345'
 
       # When I go to its properties page
-      quick_login_as_admin
-      visit main_app.admin_enterprise_producer_properties_path(s)
+      login_as_admin_and_visit main_app.admin_enterprise_producer_properties_path(s)
 
       # And I remove the property
       expect(page).to have_field 'enterprise_producer_properties_attributes_0_property_name', with: 'Certified Organic'
@@ -287,14 +286,14 @@ feature '
     let(:distributor1) { create(:distributor_enterprise, name: 'First Distributor') }
     let(:distributor2) { create(:distributor_enterprise, name: 'Another Distributor') }
     let(:distributor3) { create(:distributor_enterprise, name: 'Yet Another Distributor') }
-    let(:enterprise_user) { create_enterprise_user(enterprise_limit: 1) }
+    let(:enterprise_user) { create(:user, enterprise_limit: 1) }
     let!(:er) { create(:enterprise_relationship, parent: distributor3, child: distributor1, permissions_list: [:edit_profile]) }
 
     before(:each) do
       enterprise_user.enterprise_roles.build(enterprise: supplier1).save
       enterprise_user.enterprise_roles.build(enterprise: distributor1).save
 
-      quick_login_as enterprise_user
+      login_as enterprise_user
     end
 
     context "when I have reached my enterprise ownership limit" do

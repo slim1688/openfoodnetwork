@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Spree
@@ -24,6 +26,23 @@ module Spree
       it 'sets the access token of the session' do
         spree_post :confirm, payment_method_id: payment_method.id
         expect(session[:access_token]).to eq(controller.current_order.token)
+      end
+
+      context "if the stock ran out whilst the payment was being placed" do
+        before do
+          allow(controller.current_order).to receive(:insufficient_stock_lines).and_return(true)
+        end
+
+        it "redirects to the cart with out of stock error" do
+          expect(spree_post(:confirm, payment_method_id: payment_method.id)).
+            to redirect_to cart_path
+
+          order = controller.current_order.reload
+
+          # Order is in "cart" state and did not complete processing of the payment
+          expect(order.state).to eq "cart"
+          expect(order.payments.count).to eq 0
+        end
       end
     end
 

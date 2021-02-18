@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Api
   describe EnterpriseFeesController, type: :controller do
-    include AuthenticationWorkflow
+    include AuthenticationHelper
 
     let!(:unreferenced_fee) { create(:enterprise_fee) }
     let!(:referenced_fee) { create(:enterprise_fee) }
@@ -17,7 +19,7 @@ module Api
     describe "destroy" do
       it "removes the fee" do
         expect { spree_delete :destroy, id: unreferenced_fee.id, format: :json }
-          .to change { EnterpriseFee.count }.by -1
+          .to change { EnterpriseFee.count }.by(-1)
       end
     end
   end

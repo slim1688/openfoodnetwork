@@ -1,7 +1,96 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Spree::OrderMailer do
   include OpenFoodNetwork::EmailHelper
+
+  context "basic behaviour" do
+    let(:order) { build(:order_with_totals_and_distribution) }
+
+    context ":from not set explicitly" do
+      it "falls back to spree config" do
+        message = Spree::OrderMailer.confirm_email_for_customer(order)
+        expect(message.from).to eq [Spree::Config[:mails_from]]
+      end
+    end
+
+    it "doesn't aggressively escape double quotes in confirmation body" do
+      confirmation_email = Spree::OrderMailer.confirm_email_for_customer(order)
+      expect(confirmation_email.body).to_not include("&quot;")
+    end
+
+    it "confirm_email_for_customer accepts an order id as an alternative to an Order object" do
+      expect(Spree::Order).to receive(:find).with(order.id).and_return(order)
+      expect {
+        Spree::OrderMailer.confirm_email_for_customer(order.id).deliver_now
+      }.to_not raise_error
+    end
+
+    it "cancel_email accepts an order id as an alternative to an Order object" do
+      expect(Spree::Order).to receive(:find).with(order.id).and_return(order)
+      expect {
+        Spree::OrderMailer.cancel_email(order.id).deliver_now
+      }.to_not raise_error
+    end
+  end
+
+  context "only shows eligible adjustments in emails" do
+    let(:order) { create(:order_with_totals_and_distribution) }
+
+    before do
+      order.adjustments.create(
+        label: "Eligible Adjustment",
+        amount: 10,
+        eligible: true
+      )
+
+      order.adjustments.create!(
+        label: "Ineligible Adjustment",
+        amount: 0,
+      )
+    end
+
+    let!(:confirmation_email) { Spree::OrderMailer.confirm_email_for_customer(order) }
+    let!(:cancel_email) { Spree::OrderMailer.cancel_email(order) }
+
+    specify do
+      expect(confirmation_email.body).to_not include("Ineligible Adjustment")
+    end
+
+    specify do
+      expect(cancel_email.body).to_not include("Ineligible Adjustment")
+    end
+  end
+
+  context "displays line item price" do
+    let(:order) { create(:order_with_totals_and_distribution) }
+
+    specify do
+      confirmation_email = Spree::OrderMailer.confirm_email_for_customer(order)
+      expect(confirmation_email.body).to include("3.00")
+    end
+
+    specify do
+      cancel_email = Spree::OrderMailer.cancel_email(order)
+      expect(cancel_email.body).to include("3.00")
+    end
+  end
+
+  describe "#cancel_email_for_shop" do
+    let(:distributor) { create(:distributor_enterprise) }
+    let(:order) { create(:order, distributor: distributor, state: "canceled") }
+    let(:admin_order_link_href) { "href=\"#{spree.edit_admin_order_url(order)}\"" }
+    let(:mail) { Spree::OrderMailer.cancel_email_for_shop(order) }
+
+    it "sends an email to the distributor" do
+      expect(mail.to).to eq([distributor.contact.email])
+    end
+
+    it "includes a link to the cancelled order in admin" do
+      expect(mail.body).to match /#{admin_order_link_href}/
+    end
+  end
 
   describe "order confimation" do
     let(:bill_address) { create(:address) }
@@ -27,7 +116,7 @@ describe Spree::OrderMailer do
 
     describe "for customers" do
       it "should send an email to the customer when given an order" do
-        Spree::OrderMailer.confirm_email_for_customer(order.id).deliver
+        Spree::OrderMailer.confirm_email_for_customer(order.id).deliver_now
         expect(ActionMailer::Base.deliveries.count).to eq(1)
         expect(ActionMailer::Base.deliveries.first.to).to eq([order.email])
       end
@@ -40,14 +129,14 @@ describe Spree::OrderMailer do
       end
 
       it "sets a reply-to of the enterprise email" do
-        Spree::OrderMailer.confirm_email_for_customer(order.id).deliver
+        Spree::OrderMailer.confirm_email_for_customer(order.id).deliver_now
         expect(ActionMailer::Base.deliveries.first.reply_to).to eq([distributor.contact.email])
       end
     end
 
     describe "for shops" do
       it "sends an email to the shop owner when given an order" do
-        Spree::OrderMailer.confirm_email_for_shop(order.id).deliver
+        Spree::OrderMailer.confirm_email_for_shop(order.id).deliver_now
         expect(ActionMailer::Base.deliveries.count).to eq(1)
         expect(ActionMailer::Base.deliveries.first.to).to eq([distributor.contact.email])
       end
@@ -55,7 +144,7 @@ describe Spree::OrderMailer do
       it "sends an email even if a footer_email is given" do
         # Testing bug introduced by a9c37c162e1956028704fbdf74ce1c56c5b3ce7d
         ContentConfig.footer_email = "email@example.com"
-        Spree::OrderMailer.confirm_email_for_shop(order.id).deliver
+        Spree::OrderMailer.confirm_email_for_shop(order.id).deliver_now
         expect(ActionMailer::Base.deliveries.count).to eq(1)
       end
     end

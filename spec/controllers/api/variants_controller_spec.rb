@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Api::VariantsController, type: :controller do
@@ -14,7 +16,7 @@ describe Api::VariantsController, type: :controller do
   end
 
   context "as a normal user" do
-    sign_in_as_user!
+    let(:current_api_user) { build(:user) }
 
     let!(:product) { create(:product) }
     let!(:variant) do
@@ -24,7 +26,7 @@ describe Api::VariantsController, type: :controller do
     end
 
     it "retrieves a list of variants with appropriate attributes" do
-      spree_get :index, format: :json
+      get :index, format: :json
 
       keys = json_response.first.keys.map(&:to_sym)
       expect(attributes.all?{ |attr| keys.include? attr }).to eq(true)
@@ -84,7 +86,7 @@ describe Api::VariantsController, type: :controller do
   end
 
   context "as an enterprise user" do
-    sign_in_as_enterprise_user! [:supplier]
+    let(:current_api_user) { create(:user, enterprises: [supplier]) }
     let(:supplier_other) { create(:supplier_enterprise) }
     let(:product) { create(:product, supplier: supplier) }
     let(:variant) { product.master }
@@ -109,11 +111,10 @@ describe Api::VariantsController, type: :controller do
   end
 
   context "as an administrator" do
-    sign_in_as_admin!
+    let(:current_api_user) { create(:admin_user) }
 
     let(:product) { create(:product) }
     let(:variant) { product.master }
-    let(:resource_scoping) { { product_id: variant.product.to_param } }
 
     context "deleted variants" do
       before do
@@ -121,7 +122,7 @@ describe Api::VariantsController, type: :controller do
       end
 
       it "are visible by admin" do
-        api_get :index, show_deleted: 1
+        api_get :index, show_deleted: 1, product_id: variant.product.to_param
 
         expect(json_response.count).to eq(2)
       end
@@ -129,7 +130,7 @@ describe Api::VariantsController, type: :controller do
 
     it "can create a new variant" do
       original_number_of_variants = variant.product.variants.count
-      api_post :create, variant: { sku: "12345", unit_value: "weight", unit_description: "L" }
+      api_post :create, variant: { sku: "12345", unit_value: "weight", unit_description: "L" }, product_id: variant.product.to_param
 
       expect(attributes.all?{ |attr| json_response.include? attr.to_s }).to eq(true)
       expect(response.status).to eq(201)

@@ -1,6 +1,13 @@
+# frozen_string_literal: true
+
+require "spree/core/controller_helpers/auth"
+require "spree/core/controller_helpers/common"
+require "spree/core/controller_helpers/order"
+require "spree/core/controller_helpers/ssl"
+
 module Spree
   class UserPasswordsController < Devise::PasswordsController
-    helper 'spree/base', 'spree/store'
+    helper 'spree/base'
 
     include Spree::Core::ControllerHelpers::Auth
     include Spree::Core::ControllerHelpers::Common

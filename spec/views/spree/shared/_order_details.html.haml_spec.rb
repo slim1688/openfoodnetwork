@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 describe "spree/shared/_order_details.html.haml" do
-  include AuthenticationWorkflow
+  include AuthenticationHelper
   helper Spree::BaseHelper
 
   let(:order) { create(:completed_order_with_fees) }
@@ -19,7 +21,7 @@ describe "spree/shared/_order_details.html.haml" do
 
     render
 
-    expect(rendered).to have_content("Paying via: Bartering")
+    expect(rendered).to have_content("Paying via:\nBartering")
   end
 
   it "displays payment methods safely" do
@@ -27,7 +29,7 @@ describe "spree/shared/_order_details.html.haml" do
 
     render
 
-    expect(rendered).to have_content("Paying via: Bar<script>evil</script>ter&rarr;ing")
+    expect(rendered).to have_content("Paying via:\nBar<script>evil</script>ter&rarr;ing")
   end
 
   it "shows the last used payment method" do
@@ -49,6 +51,6 @@ describe "spree/shared/_order_details.html.haml" do
 
     render
 
-    expect(rendered).to have_content("Paying via: Credit")
+    expect(rendered).to have_content("Paying via:\nCredit")
   end
 end

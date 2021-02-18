@@ -1,9 +1,9 @@
+# frozen_string_literal: false
+
 require 'spec_helper'
 
 describe Spree::UserSessionsController, type: :controller do
-  include AuthenticationWorkflow
-
-  let(:user) { create_enterprise_user }
+  let(:user) { create(:user) }
 
   before do
     @request.env["devise.mapping"] = Devise.mappings[:spree_user]

@@ -13,14 +13,24 @@ pt:
         email: Email do/a Consumidor/a
       spree/payment:
         amount: Quantia
+        state: Estado
+        source: Origem
       spree/product:
         primary_taxon: "Categoria de Produto"
         supplier: "Fornecedor"
+        shipping_category_id: "Categoria de Envio"
         variant_unit: "Unidade da Variante"
+        variant_unit_name: "Nome da Unidade da Variante"
       spree/credit_card:
         base: "Cartão de Crédito"
+        number: "Número"
+        month: "Mês"
+        verification_value: "Número de Verificação"
+        year: "Ano"
       order_cycle:
         orders_close_at: Data de fecho
+      variant_override:
+        count_on_hand: "Disponível"
     errors:
       models:
         spree/user:
@@ -29,6 +39,10 @@ pt:
               taken: "Já existe uma conta associada a este email. Por favor faça login ou defina uma nova palavra-passe."
         spree/order:
           no_card: Não há cartões autorizados disponíveis para serem cobrados
+        spree/credit_card:
+          attributes:
+            base:
+              card_expired: "expirou"
         order_cycle:
           attributes:
             orders_close_at:
@@ -50,6 +64,8 @@ pt:
         shipping_method_ids: "Métodos de Envio"
         payment_method_ids: "Métodos de pagamento"
     errors:
+      messages:
+        inclusion: "não está incluído na lista"
       models:
         order_management/subscriptions/validator:
           attributes:
@@ -79,6 +95,8 @@ pt:
     user_confirmations:
       spree_user:
         send_instructions: "Daqui a uns minutos irá receber um email com instruções sobre como confirmar a sua conta."
+        confirmation_sent: "Email de confirmação enviado"
+        confirmation_not_sent: "Erro ao enviar Email de confirmação"
     user_registrations:
       spree_user:
         signed_up_but_unconfirmed: "Foi enviada uma mensagem para o seu endereço de email com um link de confirmação. Por favor clique nesse link para activar a sua conta."
@@ -89,9 +107,12 @@ pt:
           Entrou como visitante da última vez?  Talvez precise de criar uma conta ou de redefinir a sua palavra-passe.
       unconfirmed: "Tem de confirmar a sua conta antes de continuar."
       already_registered: "Este endereço de email já está registado. Por favor faça login para continuar, ou volte atrás e use outro endereço de email."
+    success:
+      logged_in_succesfully: "Login feito com sucesso"
     user_passwords:
       spree_user:
         updated_not_active: "A sua palavra-passe foi redefinida, mas o seu email ainda não foi confirmado."
+        updated: "A sua password foi mudada com sucesso."
         send_instructions: "Daqui a uns minutos irá receber um email com instruções sobre como confirmar a sua conta."
   models:
     order_cycle:
@@ -111,7 +132,9 @@ pt:
       email_welcome: "Bem-vindo"
       email_registered: "é agora parte de"
       email_userguide_html: "O Manual do Utilizador com suporte detalhado para gerir a sua loja está aqui: %{link}"
+      userguide: "Guia de Utilização da Open Food Network"
       email_admin_html: "Pode gerir a sua conta entrando no %{link} ou clicando na roda dentada no canto superior direito da página, e selecionando Administração."
+      admin_panel: "Painel de Administração"
       email_community_html: "Também temos um fórum online para discussão sobre a plataforma e os desafios de se manter uma iniciativa de produção e consumo local. Está convidado/a a participar! Estamos constantemente a evoluir e as suas ideias vão ajudar-nos a melhorar.\n%{link}"
       join_community: "Junte-se à comunidade"
     invite_manager:
@@ -164,8 +187,8 @@ pt:
         title: Outra Falha (%{count} encomendas)
         explainer: 'O processamento automático destas encomendas falhou devido a uma razão desconhecida. Isto não deveria estar a acontecer, por favor contacte-nos se estiver a ver esta mensagem. '
   home: "OFN"
-  title: Open Food Network
-  welcome_to: 'Bem-vindo à'
+  title: "Open Food Network"
+  welcome_to: "Bem-vindo a"
   site_meta_description: "Começamos a partir da terra. Com agricultores e produtores prontos a contarem as suas histórias com um brilho nos olhos. Com distribuidores prontos a estabelecerem ligações entre pessoas e produtos de forma justa e honesta. Com consumidores que acreditam que melhores decisões no momento da compra..."
   search_by_name: Procurar por nome ou localidade...
   producers_join: Produtores e produtoras de proximidade, estão convidados a juntarem-se à Open Food Network!
@@ -208,6 +231,7 @@ pt:
   enterprises: Organizações
   enterprise_groups: Grupos
   reports: Relatórios
+  listing_reports: Relatórios
   variant_overrides: Inventário
   import: Importar
   spree_products: Produtos Spree
@@ -237,6 +261,8 @@ pt:
   notes: Notas
   error: Erro
   processing_payment: "Pagamento em processamento..."
+  no_pending_payments: "Sem pagamentos pendentes"
+  invalid_payment_state: "Estado do pagamento inválido"
   filter_results: Filtrar resultados
   quantity: Quantidade
   pick_up: Levantamento
@@ -247,16 +273,28 @@ pt:
   reset_password_token: Redefinir palavra-passe
   expired: expirou, por favor peça uma nova
   back_to_payments_list: "Voltar à lista de pagamentos"
+  maestro_or_solo_cards: "Cartões Maestro/Solo"
+  backordered: "Encomendado"
   on hand: "Disponível"
   ship: "Enviar"
+  shipping_category: "Categoria de Envio"
+  height: "Altura"
+  width: "Largura"
+  depth: "Profundidade"
   actions:
     create_and_add_another: "Criar e acrescentar outro"
     create: "Criar"
     cancel: "Cancelar"
+    resume: "Retomar"
     save: "Guardar"
     edit: "Editar"
     update: "Atualizar"
     delete: "Apagar"
+    add: "Adicionar"
+    cut: "Cortar"
+    paste: "Colar"
+    destroy: "Destruir"
+    rename: "Mudar de nome"
   admin:
     begins_at: Começa às
     begins_on: Começa em
@@ -304,6 +342,7 @@ pt:
     show_n_more: Mostrar mais %{num}
     choose: "Escolher..."
     please_select: Por favor seleccione...
+    column_save_as_default: Guardar como Preferência
     columns: Colunas
     actions: Acções
     viewing: "Visualizando: %{current_view_name}"
@@ -314,6 +353,7 @@ pt:
     has_n_rules: "tem %{num} regras"
     unsaved_confirm_leave: "Existem alterações por guardar nesta página. Continuar sem guardar? "
     unsaved_changes: "Tem alterações por guardar"
+    available_units: "Unidades Disponíveis"
     shopfront_settings:
       embedded_shopfront_settings: "Definições de Loja Embutida"
       enable_embedded_shopfronts: "Permitir Lojas Embutidas"
@@ -324,6 +364,7 @@ pt:
     invoice_settings:
       edit:
         title: "Configuração de Faturas"
+        enable_invoices?: "Ativar Faturas?"
         invoice_style2?: "Use o modelo alternativo de fatura que inclui o total de impostos dividido por taxa e taxa de imposto por item (ainda não disponível para países que exibem preços sem taxas)"
         enable_receipt_printing?: "Mostrar opções para imprimir recibos usando impressoras térmicas no selector de encomendas?"
     stripe_connect_settings:
@@ -347,8 +388,10 @@ pt:
         title: "Configurações Matomo"
         matomo_url: "URL Matomo"
         matomo_site_id: "Site ID Matomo"
-        info_html: "Matomo é uma ferramenta de análise web e mobile. Pode instalar o Matomo no seu servidor ou utilizar um serviço na cloud. Veja <a href='http://matomo.org' target='_blank'>matomo.org</a> para mais informações."
+        matomo_tag_manager_url: "URL do Tag Manager Matomo"
+        info_html: "O Matomo é uma aplicação Web e Mobile de Análise de dados. Pode instalar o Matomo num servidor ou usar um serviço na cloud. Para mais informações veja <a href='http://matomo.org' target='_blank'>matomo.org</a>"
         config_instructions_html: "Aqui pode configurar a integração com Matomo. O URL Matomo em baixo deve apontar para o serviror para onde a informação de tracking de utilizadores será enviada; se deixado vazio, o tracking de utilizadores através do Matomo ficará desactivado. O campo Site ID não é obrigatório mas útil se estive a fazer tracking de mais do que um website numa instância única do Matomo; pode ser encontrado na consola da instância Matomo."
+        config_instructions_tag_manager_html: "Definir o URL do Tag Manager Matomo ativa o Matomo Tag Manager. Esta ferramenta permite definir eventos de Analytics."
     customers:
       index:
         new_customer: "Novo/a Consumidor/a"
@@ -356,20 +399,23 @@ pt:
         duplicate_code: "Este código já está a ser usado."
         bill_address: "Morada de Faturação"
         ship_address: "Morada de Envio"
-        update_address_success: 'Morada actualizada com sucesso'
-        update_address_error: 'Perdão! Por favor preencha todos os campos obrigatórios!'
-        edit_bill_address: 'Editar Morada de Faturação'
-        edit_ship_address: 'Editar Morada de Envio'
-        required_fileds: 'Os campos obrigatórios estão marcados com um asterisco'
-        select_country: 'Seleccionar País'
-        select_state: 'Seleccionar Região'
-        edit: 'Editar'
-        update_address: 'Actualizar Morada'
-        confirm_delete: 'De certeza que é para apagar? '
+        balance: "Saldo"
+        update_address_success: "Morada actualizada com sucesso"
+        update_address_error: "Perdão! Por favor preencha todos os campos obrigatórios!"
+        edit_bill_address: "Editar Morada de Faturação"
+        edit_ship_address: "Editar Morada de Envio"
+        required_fileds: "Os campos obrigatórios estão marcados com um asterisco"
+        select_country: "Seleccionar País"
+        select_state: "Seleccionar Região"
+        edit: "Editar"
+        update_address: "Actualizar Morada"
+        confirm_delete: "De certeza que é para apagar? "
         search_by_email: "Pesquisar por e-mail/código"
-        guest_label: 'Finalizar compra como convidado'
+        guest_label: "Finalizar compra como convidado"
+        credit_owed: "Crédito Devido"
+        balance_due: "Saldo Pendente"
       destroy:
-        has_associated_orders: 'Não foi possível apagar: o/a consumidor/a tem encomendas associadas a esta loja.'
+        has_associated_orders: "Não foi possível apagar: o/a consumidor/a tem encomendas associadas a esta loja."
     contents:
       edit:
         title: Conteúdo
@@ -382,6 +428,7 @@ pt:
         footer_and_external_links: Rodapé e Ligações Externas
         your_content: O seu conteúdo
         user_guide: Manual do Utilizador
+        map: Mapa
     enterprise_fees:
       index:
         title: "Taxas de Organização"
@@ -392,6 +439,7 @@ pt:
         calculator: "Calculadora"
         calculator_values: "Valores da calculadora"
         search: "Procurar"
+        name_placeholder: "por ex. taxa de embalagem"
     enterprise_groups:
       index:
         new_button: Novo grupo de organizações
@@ -425,9 +473,12 @@ pt:
         infinity: "Infinito"
         to_order_tip: "Os itens feitos por encomenda não têm um nível de stock definido, como pão fresco, por exemplo."
       back_to_products_list: "Voltar à lista de produtos"
+      editing_product: "Editando um Produto"
       tabs:
+        product_details: "Detalhes do Produto"
         group_buy_options: "Opções de Compra Colectiva"
         images: "Imagens"
+        variants: "Variantes"
         product_properties: "Propriedades do Produto"
     product_import:
       title: Importação de Produtos
@@ -449,7 +500,10 @@ pt:
         line_number: "Linha %{number}:"
         encoding_error: "Por favor verifique as configurações de linguagem do ficheiro fonte e verifique que é gravado em UTF-8"
         unexpected_error: "Error inesperado ao abrir o ficheiro: %{error_message}"
+        malformed_csv: "O ficheiro CSV não está bem formatado: %{error_message}"
       index:
+        notice: "Avisos"
+        beta_notice: "Esta funcionalidade ainda está em modo de testes, pode experenciar alguns erros. Não hesite em contactar o suporte da aplicação."
         select_file: Selecione uma folha de cálculo para carregar
         spreadsheet: Folha de cálculo
         choose_import_type: Selecione tipo de importação
@@ -528,6 +582,7 @@ pt:
         title: Inventário
         description: Utilize esta página para gerir os inventários das suas organizações. Qualquer detalhe de produto que seja introduzido aqui, irá substituir o que foi especificado na página de 'Produtos'
         enable_reset?: Activar Reposição do Stock?
+        default_stock: "Stock por defeito"
         inherit?: Herdar?
         add: Adicionar
         hide: Ocultar
@@ -547,6 +602,8 @@ pt:
       controls:
         back_to_my_inventory: Voltar ao inventário
     orders:
+      edit:
+        order_sure_want_to: Tem a certeza que quer %{event} esta encomenda?
       invoice_email_sent: 'Email de facturação enviado'
       order_email_resent: 'Email de encomenda reenviado'
       bulk_management:
@@ -556,7 +613,7 @@ pt:
         order_date: "Concluído Em"
         max: "Máximo"
         product_unit: "Produto: Unidade"
-        weight_volume: "Peso/Volume"
+        weight_volume: "Peso/Volume (g)"
         ask: "Perguntar?"
         page_title: "Gestão de Encomendas em Massa"
         actions_delete: "Apagar o Selecionado"
@@ -593,6 +650,9 @@ pt:
           acn_placeholder: 'ex: 123 456 789'
           display_invoice_logo: Exibir logotipo nas facturas
           invoice_text: 'Adicionar texto customizado no final das facturas '
+          terms_and_conditions: "Termos e Condições"
+          remove_terms_and_conditions: "Remover ficheiro"
+          uploaded_on: "actualizado em"
         contact:
           name: Nome
           name_placeholder: 'ex: Gustavo Pereira'
@@ -615,6 +675,8 @@ pt:
           promo_image_note1: 'POR FAVOR OBSERVE:'
           promo_image_note2: Qualquer imagem promocional carregada aqui será cortada para 1200 x 260.
           promo_image_note3: A imagem promocional é exibida no topo da página de perfil da organização e em janelas pop-up.
+          remove_logo: "Remover Imagem"
+          remove_promo_image: "Remover Imagem"
         inventory_settings:
           text1: Pode optar por gerir o seu nível de stock e preços através do seu
           inventory: inventário
@@ -654,13 +716,14 @@ pt:
           permalink_tip: "Este link é usado para criar o URL para a sua loja: %{link}nome-loja/loja"
           link_to_front: Link para a loja
           link_to_front_tip: Um link direto para a sua loja no Open Food Network.
+          ofn_uid: ID na OpenFoodNetwork
+          ofn_uid_tip: O número de identificação serve para identificar a organização na Open Food Network.
         shipping_methods:
-          name: Nome
-          applies: Aplicável?
-          manage: Gerir Métodos de Envio
-          create_button: Criar Nova Forma de Envio
-          create_one_button: Criar um agora
-          no_method_yet: Ainda não tem nenhuma forma de envio.
+          name: "Nome"
+          manage: "Gerir Métodos de Envio"
+          create_button: "Criar Nova Forma de Envio"
+          create_one_button: "Criar um agora"
+          no_method_yet: "Ainda não tem nenhuma forma de envio."
         shop_preferences:
           shopfront_requires_login: "Loja visível publicamente?"
           shopfront_requires_login_tip: "Escolha se os consumidores vão precisar de fazer login para ver a loja, ou se esta estará visível para toda a gente."
@@ -679,6 +742,8 @@ pt:
           enable_subscriptions_tip: "Activar a funcionalidade das subscrições?"
           enable_subscriptions_false: "Desactivado"
           enable_subscriptions_true: "Activo"
+          customer_names_false: "Desactivado"
+          customer_names_true: "Activo"
           shopfront_message: "Mensagem da Loja"
           shopfront_message_link_tooltip: "Inserir / editar link"
           shopfront_message_link_prompt: "Por favor insira um URL"
@@ -792,14 +857,6 @@ pt:
       new:
         title: Nova Organização
         back_link: Voltar à lista de organizações
-      remove_logo:
-        remove: "Remover Imagem"
-        removed_successfully: "Logotipo removido com sucesso"
-        immediate_removal_warning: "O logotipo será removido imediatamente após a confirmação."
-      remove_promo_image:
-        remove: "Remover Imagem"
-        removed_successfully: "Imagem promocional removida com sucesso"
-        immediate_removal_warning: "A imagem promocional será removida imediatamente após confirmação."
       welcome:
         welcome_title: Bem-vindo à Open Food Network!
         welcome_text: Você criou com sucesso uma
@@ -817,16 +874,26 @@ pt:
       new:
         create: "Criar"
         cancel: "Cancelar"
+        back_to_list: "Voltar à Lista"
       edit:
         advanced_settings: "Configurações Avançadas"
         save: "Guardar"
+        save_and_next: "Guardar e Continuar"
         next: "Seguinte"
         cancel: "Cancelar"
+        back_to_list: "Voltar à Lista"
+        save_and_back_to_list: "Guardar e Voltar à Lista"
         choose_products_from: "Escolha produtos de:"
       incoming:
+        incoming: "Entrada"
+        supplier: "Fornecedor"
+        products: "Produtos"
+        fees: "Taxas"
         save: "Guardar"
+        save_and_next: "Guardar e Continuar"
         next: "Seguinte"
         cancel: "Cancelar"
+        back_to_list: "Voltar à Lista"
       outgoing:
         outgoing: "Saída"
         distributor: "Distribuidor"
@@ -835,7 +902,9 @@ pt:
         fees: "Taxas"
         previous: "Anterior"
         save: "Guardar"
+        save_and_back_to_list: "Guardar e Voltar à Lista"
         cancel: "Cancelar"
+        back_to_list: "Voltar à Lista"
       exchange_form:
         pickup_time_tip: Quando as encomendas deste ciclo ficam prontas para o consumidor
         pickup_instructions_placeholder: "Instruções para levantamento"
@@ -974,16 +1043,20 @@ pt:
         name: "Sumário das Taxas de Organização"
         description: "Sumário das Taxas de Organização cobradas"
     subscriptions:
-      subscriptions: Subscrições
-      new: Nova Subscrição
-      create: Criar Subscrição
-      edit: Editar Subscrição
+      index:
+        title: "Subscrições"
+        new: "Nova Subscrição"
+      new:
+        title: "Nova Subscrição"
+      edit:
+        title: "Editar Subscrição"
       table:
         edit_subscription: Editar Subscrição
         pause_subscription: Pausar Subscrição
         unpause_subscription: Parar pausa da Subscrição
         cancel_subscription: Cancelar Subscrição
       setup_explanation:
+        title: "Subscrições"
         just_a_few_more_steps: 'Só mais uns passos antes de poder começar:'
         enable_subscriptions: "Activar subscrições para pelo menos uma das suas lojas"
         enable_subscriptions_step_1_html: 1. Vá à página %{enterprises_link}, encontre a sua loja, e clique em "Gerir"
@@ -997,6 +1070,8 @@ pt:
         create_at_least_one_schedule_step_3: 3. Clique em '+ Novo Horário', e preencha o formulário
         once_you_are_done_you_can_html: Assim que estiver feito, pode %{reload_this_page_link}
         reload_this_page: carregar de novo esta página
+      form:
+        create: "Criar Subscrição"
       steps:
         details: 1. Detalhes Básicos
         address: 2. Morada
@@ -1070,6 +1145,8 @@ pt:
     already_ordered:
       cart: "carrinho"
       message_html: "Já tem uma encomenda para este ciclo de encomendas. Verifique o %{cart} para ver os itens já encomendados. Também pode cancelar itens enquanto o ciclo estiver aberto."
+    terms_and_conditions:
+      link_text: "Termos e Condições"
   shops:
     hubs:
       show_closed_shops: "Mostrar lojas fechadas"
@@ -1077,11 +1154,11 @@ pt:
       show_on_map: "Mostrar todas as lojas no mapa"
   shared:
     menu:
+      cart_sidebar:
+        checkout: "Finalizar compra"
+        close: "Fechar"
       signed_in:
         profile: "Perfil"
-      joyride:
-        checkout: "Finalizar compra agora"
-        already_ordered_products: "Já encomendado neste ciclo de encomendas"
     register_call:
       selling_on_ofn: "Tem interesse em participar na Open Food Network?"
       register: "Registe-se aqui"
@@ -1104,8 +1181,12 @@ pt:
       footer_data_cookies_policy: "política de cookies"
   shop:
     messages:
-      login: "Entrar"
-      contact: "contacto"
+      customer_required:
+        login: "Entrar"
+        contact: "contacto"
+    products:
+      summary:
+        bulk: "Em Massa"
   card_could_not_be_updated: O cartão não pode ser actualizado
   card_could_not_be_saved: o cartão não pode ser guardado
   spree_gateway_error_flash_for_checkout: "Houve um problema com a sua informação de pagamento: %{error}"
@@ -1217,6 +1298,8 @@ pt:
   cart_updating: "Atualizando carrinho"
   cart_empty: "Carrinho vazio"
   cart_edit: "Edite o seu carrinho"
+  item: "Item"
+  qty: "Qtd"
   card_number: Número do Cartão
   card_securitycode: "Código de Segurança"
   card_expiry_date: Data de Vencimento
@@ -1458,14 +1541,19 @@ pt:
   hubs_distance: Mais próximo a
   hubs_distance_filter: "Mostrar lojas próximas a %{location}"
   shop_changeable_orders_alert_html:
-    one: Tem encomendas com actualmente abertas para revisão. Pode fazer alterações até .
+    few: 'Tem <a href=''%{path}'' target=''_blank''>%{count}encomendas com %{shop}</a> actualmente abertas para revisão. Pode fazer alterações até %{oc_close}. '
+    many: 'Tem <a href=''%{path}'' target=''_blank''>%{count}encomendas com %{shop}</a> actualmente abertas para revisão. Pode fazer alterações até %{oc_close}. '
     other: 'Tem <a href=''%{path}'' target=''_blank''>%{count}encomendas com %{shop}</a> actualmente abertas para revisão. Pode fazer alterações até %{oc_close}. '
   orders_changeable_orders_alert_html: Esta encomenda está confirmada, mas pode fazer alterações até <strong>%{oc_close}</strong>.
-  products_clear_all: Limpar tudo
+  products_clear: Limpar
   products_showing: "Mostrando:"
-  products_or: "OU"
+  products_or: "ou"
+  products_and: "e"
   products_with: com
-  products_search: "Procurar por produto ou produtor"
+  products_filter_by: "Filtrar por"
+  products_filter_selected: "selecionado"
+  products_filter_clear: "Limpar"
+  products_filter_done: "Fechar"
   products_loading: "Carregando produtos..."
   products_updating_cart: "Atualizando carrinho..."
   products_cart_empty: "Carrinho vazio"
@@ -1594,7 +1682,8 @@ pt:
   orders_could_not_cancel: "Pedimos desculpa, a sua encomenda não pode ser cancelada"
   orders_cannot_remove_the_final_item: "Não é possível remover o item final de uma encomenda, em vez disso, por favor cancele a encomenda."
   orders_bought_items_notice:
-    one: "Um item adicional já está confirmado para este ciclo de encomendas"
+    few: "%{count}itens adicionais já confirmados para este ciclo de encomendas "
+    many: "%{count}itens adicionais já confirmados para este ciclo de encomendas "
     other: "%{count}itens adicionais já confirmados para este ciclo de encomendas "
   orders_bought_edit_button: Editar itens confirmados
   orders_bought_already_confirmed: "* já confirmado"
@@ -1615,8 +1704,7 @@ pt:
   password: Palavra-passe
   remember_me: Lembrar meu login
   are_you_sure: "Tem a certeza?"
-  orders_open: Encomendas abertas
-  closing: "Fechando"
+  orders_open: "Encomendas abertas"
   going_back_to_home_page: "Voltando à pagina inicial"
   creating: Criando
   updating: Atualizando
@@ -1797,7 +1885,6 @@ pt:
   shop_for_products_html: "Compre produtos da <span class=\"turquoise\">%{enterprise}</span> em:"
   change_shop: "Mudar loja para:"
   shop_at: "Compre agora em:"
-  price_breakdown: "Preço detalhado"
   admin_fee: "Taxa de administração"
   sales_fee: "Taxa de venda"
   packing_fee: "Taxa de embalagem"
@@ -1857,6 +1944,7 @@ pt:
   supplier: "Fornecedor"
   product_name: "Nome do Produto"
   product_description: "Descrição do Produto"
+  shipping_categories: "Categorias de Envio"
   units: "Tamanho unitário"
   coordinator: "Coordenador"
   distributor: "Distribuidor"
@@ -1866,6 +1954,9 @@ pt:
   delivery_method: Método de Entrega
   fee_type: "Tipo de Taxa"
   tax_category: "Categoria de Imposto"
+  description: "Descrição"
+  display: "Mostrar"
+  tags: "Etiquetas"
   calculator: "Calculadora"
   calculator_values: "Valores da calculadora"
   flat_percent_per_item: "Percentual (por unidade)"
@@ -1922,6 +2013,7 @@ pt:
   spree_admin_supplier: Fornecedor
   spree_admin_product_category: Categoria de Produto
   spree_admin_variant_unit_name: Nome da Unidade da Variante
+  unit_name: "Nome da Unidade"
   change_package: "Modificar Embalagem"
   spree_admin_single_enterprise_hint: "Dica: Para permitir que as pessoas te encontrem, ative sua visibilidade em"
   spree_admin_eg_pickup_from_school: "ex: \"Levantar na Escola Primária\""
@@ -1934,7 +2026,6 @@ pt:
   spree_user_enterprise_limit_error: "^%{email} não tem autorização para ter mais organizações (o limite é %{enterprise_limit})."
   spree_variant_product_error: tem de ter pelo menos uma variante
   your_profil_live: "O seu perfil online"
-  on_ofn_map: "no mapa da Open Food Network"
   see: "Ver"
   live: "online"
   manage: "Gerir"
@@ -1951,6 +2042,7 @@ pt:
   remove_tax: "Remover imposto"
   first_name_begins_with: "Primeiro nome começa com"
   last_name_begins_with: "Último nome começa com"
+  new_order: "Nova Encomenda"
   enterprise_tos_link: "Ligação para Termos de Serviço da Organização"
   enterprise_tos_message: "Queremos trabalhar com pessoas que partilham os nossos objectivos e valores. Por isso pedimos às organizações novas que concordem com os nossos"
   enterprise_tos_link_text: "Termos de Serviço."
@@ -2233,8 +2325,9 @@ pt:
     admin:
       enterprise_limit_reached: "Atingiu o número limite de organizações por conta. Escreva para %{contact_email} se precisar de aumentá-lo."
       modals:
-        got_it: Percebi
+        got_it: "Percebi"
         close: "Fechar"
+        continue: "Continuar"
         invite: "Convidar"
         invite_title: "Convidar um/a utilizador/a não-registado/a"
         tag_rule_help:
@@ -2423,6 +2516,13 @@ pt:
       subscriptions:
         new:
           please_select_a_shop: "Por favor selecione uma loja"
+      enterprises:
+        form:
+          images:
+            removed_logo_successfully: "Logotipo removido com sucesso"
+            immediate_logo_removal_warning: "O logotipo será removido imediatamente após a confirmação."
+            removed_promo_image_successfully: "Imagem promocional removida com sucesso"
+            immediate_promo_image_removal_warning: "A imagem promocional será removida imediatamente após confirmação."
     insufficient_stock: "Stock disponível insuficiente, apenas %{on_hand} disponíveis"
     out_of_stock:
       reduced_stock_available: Stock reduzido disponível
@@ -2431,6 +2531,11 @@ pt:
           carrinho baixou. Aqui está o que mudou:
       now_out_of_stock: está agora sem stock.
       only_n_remainging: "agora só tem %{num}restantes."
+    shopfront:
+      variant:
+        add_to_cart: "Adicionar"
+      bulk_buy_modal:
+        max_quantity: "Quantidade máxima"
     variants:
       on_demand:
         'yes': "Sob encomenda"
@@ -2495,6 +2600,43 @@ pt:
       signup_or_login: "Comece por fazer login ou registar-se"
       have_an_account: "Já possui uma conta?"
       action_login: "Entrar agora."
+  inflections:
+    packet:
+      one: "pacote"
+      other: "pacotes"
+    item:
+      one: "item"
+      other: "itens"
+    dozen:
+      one: "dúzia"
+      other: "dúzias"
+    unit:
+      one: "unidade"
+      other: "unidades"
+    serve:
+      one: "dose"
+      other: "doses"
+    tray:
+      one: "bandeja"
+      other: "bandejas"
+    piece:
+      one: "parte"
+      other: "partes"
+    pot:
+      one: "pote"
+      other: "potes"
+    bundle:
+      one: "pacote"
+      other: "pacotes"
+    flask:
+      one: "frasco"
+      other: "frascos"
+    basket:
+      one: "cesto"
+      other: "cestos"
+    sack:
+      one: "saco"
+      other: "sacos"
   producers:
     signup:
       start_free_profile: "Comece com um perfil gratuito e expanda quando estivere pronto/a!"
@@ -2551,6 +2693,7 @@ pt:
   customer_details: "Detalhes do/a Consumidor/a"
   adjustments: "Ajustes"
   payments: "Pagamentos"
+  credit_owed: "Crédito Devido"
   payment: "Pagamento"
   payment_method: "Método de Pagamento"
   shipment: "Envio"
@@ -2574,6 +2717,7 @@ pt:
   previous: "Anterior"
   last: "Último"
   spree:
+    more: "Mais"
     your_order_is_empty_add_product: "A sua encomenda está vazia, por favor procure e adicione um produto em cima"
     add_product: "Adicionar Produto"
     name_or_sku: "Nome ou Código (insira pelo menos 4 caracteres)"
@@ -2615,8 +2759,11 @@ pt:
     adjustments: "Ajustes"
     continue: "Continuar"
     fill_in_customer_info: "Por favor preencha informação do/a consumidor/a"
+    credit_card: "Cartão de Crédito"
     new_payment: "Novo Pagamento"
     capture: "Capturar"
+    login: "Entrar"
+    password: "Palavra-passe"
     configurations: "Configurações"
     general_settings: "Configurações Gerais"
     site_name: "Nome do Site"
@@ -2644,21 +2791,13 @@ pt:
     smtp_send_copy_to_this_addresses: "Envia uma cópia de todos os email enviados para este endereço. Para múltiplos endereços, separar por vírgulas."
     intercept_email_address: "Interceptar Endereço de Email"
     intercept_email_instructions: "Substituir destinatário de todos os email por este endereço."
-    image_settings: "Configurações de Imagens"
-    image_settings_warning: "Terá de regenerar os ícones se alterar is estilos. Para tal execute rake paperclip:refresh:thumbnails CLASS=Spree::Image"
-    attachment_default_style: Estilo dos Anexos
-    attachment_default_url: "URL por defeito dos Anexos"
-    attachment_path: "Localização dos Anexos"
-    attachment_styles: "Estilos do Anexo"
-    attachment_url: "URL do Anexo"
-    add_new_style: "Adicionar Novo Estilo"
-    image_settings_updated: "Configurações de Imagens actualizadas com sucesso."
     tax_categories: "Categorias de Impostos"
     listing_tax_categories: "Lista de Categorias de Impostos"
     back_to_tax_categories_list: "Voltar à Lista de Categorias de Impostos"
     tax rate: "Taxas de Imposto"
     new_tax_rate: "Nova Taxa de Imposto"
     tax_category: "Categoria de Imposto"
+    tax_rates: "Taxas de Imposto"
     rate: "Taxa"
     tax_rate_amount_explanation: "Taxas de Imposto são uma quantidade decimal que suportam o cálculo (por exemplo, se a taxa de imposto for 5%, insira 0.05)"
     included_in_price: "Incluído no Preço"
@@ -2681,12 +2820,11 @@ pt:
     abbreviation: "Abreviatura"
     new_state: "Nova Região"
     payment_methods: "Métodos de pagamento"
-    new_payment_method: "Novo Método de Pagamento"
-    provider: "Fornecedor"
     taxonomies: "Taxonomias"
     new_taxonomy: "Nova Taxonomia"
     back_to_taxonomies_list: "Voltar à Lista de Taxonomias"
     shipping_methods: "Métodos de Envio"
+    shipping_method: "Método de Envio"
     shipping_categories: "Categorias de Envio"
     new_shipping_category: "Nova Categoria de Envio"
     back_to_shipping_categories: "Voltar à Lista de Categorias de Envio"
@@ -2712,16 +2850,27 @@ pt:
     inventory_error_flash_for_insufficient_quantity: "Um item do seu carrinho ficou indisponível."
     inventory: Inventário
     zipcode: Código postal
-    weight: Peso (por kg)
+    options: "Opções"
+    successfully_created: '%{resource} foi criado/a com sucesso!'
+    successfully_updated: '%{resource} foi actualizado/a com sucesso!'
+    payment_method: "Método de Pagamento"
+    payment_processing_failed: "O pagamento não pode ser processado, por favor verifique os detalhes que introduziu"
     actions:
       update: "Atualizar"
+      cancel: "Cancelar"
+    shared:
+      payments_list:
+        amount: "Quantia"
+        payment_method: "Método de Pagamento"
+        payment_state: "Estado do Pagamento"
     errors:
       messages:
         blank: "não pode ser vazio"
     layouts:
       admin:
-        header:
-          store: Loja
+        login_nav:
+          header:
+            store: Loja
     admin:
       tab:
         dashboard: "Painel de controlo"
@@ -2763,6 +2912,12 @@ pt:
         form:
           product: "Produto"
           amount: "Quantia"
+          reason: "Razão"
+          stock_location: "Localização do Stock"
+        states:
+          authorized: "Autorizada"
+          received: "Recebida"
+          canceled: "Cancelada"
       orders:
         index:
           listing_orders: "Lista de Encomendas"
@@ -2770,6 +2925,7 @@ pt:
           capture: "Capturar"
           ship: "Enviar"
           edit: "Editar"
+          order_not_updated: "A encomenda não pôde ser actualizada"
           note: "Nota"
           first: "Primeiro"
           last: "Último"
@@ -2792,6 +2948,8 @@ pt:
           tax_invoice: "FACTURA FISCAL"
           code: "Código"
           from: "De"
+          to: "Faturar a"
+          shipping: "Envio"
         form:
           distribution_fields:
             title: "Distribuição"
@@ -2807,6 +2965,8 @@ pt:
           active_products:
             zero: "Não tem nenhum produto ativo."
             one: "Tem um produto ativo"
+            few: "Tem %{count} produtos ativos"
+            many: "Tem %{count} produtos ativos"
             other: "Tem %{count} produtos ativos"
         order_cycles:
           order_cycles: "Ciclos de Encomendas"
@@ -2814,26 +2974,56 @@ pt:
           you_have_active:
             zero: "Não tem nenhum ciclo de encomendas activo."
             one: "Tem um ciclo de encomendas activo."
+            few: "Tem %{count}ciclos de encomendas activos."
+            many: "Tem %{count}ciclos de encomendas activos."
             other: "Tem %{count}ciclos de encomendas activos."
           manage_order_cycles: "GERIR CICLOS DE ENCOMENDAS"
       shipping_methods:
         index:
           shipping_methods: "Métodos de Envio"
+          new_shipping_method: "Novo Método de Envio"
           name: "Nome"
           products_distributor: "Distribuidor"
           zone: "Zona"
           calculator: "Calculadora"
           display: "Mostrar"
+          both: "Ambos Checkout e Administração"
+          back_end: "Só Administração"
+          no_shipping_methods_found: "Nenhum método de envio encontrado"
+        new:
+          new_shipping_method: "Novo Método de Envio"
+          back_to_shipping_methods_list: "Voltar à Lista de Categorias de Envio"
         edit:
           editing_shipping_method: "Editar Método de Envio"
           new: "Novo"
+          back_to_shipping_methods_list: "Voltar à Lista de Categorias de Envio"
         form:
+          categories: "Categorias"
           zones: "Zonas"
+          both: "Ambos Checkout e Administração"
+          back_end: "Só Administração"
+          deactivation_warning: "Desactivar um método de envio pode fazer o método de envio desaparecer da sua lista. Alternativamente, pode esconder um método de envio da página de checkout definindo a propriedade \"Disponível em\" como \"Só Administração\"."
       payment_methods:
+        index:
+          payment_methods: "Métodos de pagamento"
+          new_payment_method: "Novo Método de Pagamento"
+          name: "Nome"
+          products_distributor: "Distribuidor"
+          provider: "Fornecedor"
+          environment: "Ambiente"
+          display: "Mostrar"
+          active: "Ativo"
+          both: "Ambos"
+          front_end: "Só checkout"
+          back_end: "Só Administração"
+          active_yes: "Sim"
+          active_no: "Não"
+          no_payment_methods_found: "Nenhum método de pagamento encontrado"
         new:
           new_payment_method: "Novo Método de Pagamento"
           back_to_payment_methods_list: "Voltar à Lista de Métodos de Pagamento"
         edit:
+          new: "Novo"
           editing_payment_method: "Editar Método de Pagamento"
           back_to_payment_methods_list: "Voltar à Lista de Métodos de Pagamento"
         stripe_connect:
@@ -2849,6 +3039,20 @@ pt:
           account_id: ID de Conta
           business_name: Nome do Negócio
           charges_enabled: Taxas activas
+        form:
+          name: "Nome"
+          description: "Descrição"
+          environment: "Ambiente"
+          display: "Mostrar"
+          active: "Ativo"
+          active_yes: "Sim"
+          active_no: "Não"
+          both: "Ambos Checkout e Administração"
+          front_end: "Só checkout"
+          back_end: "Só Administração"
+          tags: "Etiquetas"
+        providers:
+          provider: "Fornecedor"
       payments:
         source_forms:
           stripe:
@@ -2862,6 +3066,7 @@ pt:
           product_name: "Nome do Produto"
           units: "Tamanho unitário"
           value: "Valor"
+          unit_name: "Nome da Unidade"
           price: "Preço"
           on_hand: "Disponível"
           on_demand: "Sob Encomenda"
@@ -2929,18 +3134,39 @@ pt:
         index:
           sku: "SKU"
           price: "Preço"
+          options: "Opções"
           no_results: "Nenhum resultado"
+          to_add_variants_you_must_first_define: "Para adicionar variants, primeiro tem de"
           option_types: "Tipos de Opções"
+          option_values: "Opções de Valor"
+          and: "e"
+          new_variant: "Nova variante"
+          show_active: "Mostrar activas"
+          show_deleted: "Mostrar apagadas"
+        new:
+          new_variant: "Nova variante"
         form:
+          cost_price: "Preço de Custo"
           sku: "SKU"
           price: "Preço"
           display_as: "Mostrar como"
+          display_name: "Nome a apresentar"
+          display_as_placeholder: 'por ex. 2 kg'
+          display_name_placeholder: 'por ex. Tomates'
         autocomplete:
+          out_of_stock: "Sem Stock"
           producer_name: "Produtor"
           unit: "Unidade"
       shared:
         sortable_header:
           name: "Nome"
+          number: "Número"
+          state: "Estado"
+          payment_state: "Estado do Pagamento"
+          shipment_state: "Estado do envio"
+          email: "Email"
+          total: "Total"
+      general_settings:
         edit:
           legal_settings: "Configurações Legais"
           cookies_consent_banner_toggle: "Mostrar o Banner de consentimento de Cookies"
@@ -2963,10 +3189,9 @@ pt:
           or_enter_new_card: "Ou, introduza detalhes para um novo cartão:"
           remember_this_card: Lembra-se deste cartão?
     date_picker:
-      format: '%Y-%m-%d'
-      js_format: 'aa-mm-dd'
+      now: "Agora"
     orders:
-      error_flash_for_unavailable_items: "Um item do seu carrinho ficou indisponível."
+      error_flash_for_unavailable_items: "Um item do seu carrinho ficou indisponível. Por favor actualize as quantidades."
       edit:
         login_to_view_order: "Por favor faça login para ver a sua encomenda."
       bought:
@@ -2994,15 +3219,46 @@ pt:
       invalid: inválido
     order_mailer:
       cancel_email:
-        customer_greeting: "Olá %{name}!"
-        instructions: "A sua encomenda foi cancelada. Para seu registo, por favor guarde esta informação de cancelamento."
-        order_summary_canceled: "Sumário de Encomenda [CANCELADA]"
+        customer_greeting: "Caro/a %{name},"
+        instructions_html: "A sua encomenda com <strong>%{distributor}</strong> foi cancelada. Por favor guarde a informação sobre este cancelamento."
+        dont_cancel: "Se mudar de ideas e não quiser cancelar esta encomenda por favor contacte %{email}"
+        order_summary_canceled_html: "<strong>Ŕesumo da Encomenda #%{number} [CANCELADA]</strong>"
+        details: "Aqui estão os detalhes do que encomendou."
+        unpaid_order: "A encomenda não estava paga portanto nenhum reembolso foi feito"
+        paid_order: "A encomenda estava paga portanto a organização %{distributor} fez o reembolso total"
+        credit_order: "A encomenda estava paga portanto a sua conta foi creditada"
+        subject: "Cancelamento de Encomenda"
+      cancel_email_for_shop:
+        greeting: "Caro/a %{name},"
         subject: "Cancelamento de Encomenda"
       confirm_email:
         subject: "Confimação de Encomenda"
       invoice_email:
         hi: "Olá %{name}"
         invoice_attached_text: Pode encontrar em anexo um recibo da encomenda que fez recentemente a
+    user_mailer:
+      reset_password_instructions:
+        request_sent_text: |
+            Recebemos um pedido para redefinir a sua palavra-passe.
+            Se não fez este pedido, simplesmente ignore esta mensagem.
+        link_text: >
+            Se fez este pedido, clique no link abaixo:
+        issue_text: |
+            Se o endereço URL acima não funcionar, tente copiá-lo e colá-lo directamente no browser. Se continuar a ter problemas por favor entre em contacto connosco.
+      confirmation_instructions:
+        subject: "Por favor confirme a sua conta OFN"
+    shipment_mailer:
+      shipped_email:
+        dear_customer: "Caro Consumidor,"
+        instructions: "A sua encomenda foi enviada"
+        shipment_summary: "Sumário de Envio"
+        subject: "Notificação de Envio"
+        thanks: "Obrigado."
+        track_information: "Informação de envio: %{tracking}"
+        track_link: "Link de envio: %{url}"
+    test_mailer:
+      test_email:
+        greeting: "Parabéns!"
     order_state:
       address: morada
       adjustments: ajustes
@@ -3024,17 +3280,8 @@ pt:
       ended: terminou
       paused: em pausa
       canceled: cancelado
-    user_mailer:
-      reset_password_instructions:
-        request_sent_text: |
-            Recebemos um pedido para redefinir a sua palavra-passe.
-            Se não fez este pedido, simplesmente ignore esta mensagem.
-        link_text: >
-            Se fez este pedido, clique no link abaixo:
-        issue_text: |
-            Se o endereço URL acima não funcionar, tente copiá-lo e colá-lo directamente no browser. Se continuar a ter problemas por favor entre em contacto connosco.
-      confirmation_instructions:
-        subject: Por favor confirme a sua conta OFN
+    paypal:
+      refund_amount: "Quantia"
     users:
       form:
         account_settings: Definições de Conta
@@ -3073,10 +3320,13 @@ pt:
         delete?: Apagar?
       cards:
         authorised_shops: Lojas Autorizadas
-        authorised_shops_popover: Esta é uma lista de organizações que está autorizada a cobrar o seu cartão de crédito por defeito para as subscrições que tem. Os detalhes do seu cartão não serão partilhados com os vendedores. Será sempre notificado quando houver alguma cobrança.
         saved_cards_popover: Esta é a lista de cartões que optou por guardar para uso futuro. O seu cartão por defeito será selecionado quando fizer checkout e pode ser cobrado pelas organizações que autorizou (veja à direita).
       authorised_shops:
         shop_name: "Nome da Loja"
-        allow_charges?: "Permitir Taxas?"
     localized_number:
       invalid_format: tem um formato inválido. Por favor introduza um número.
+    activerecord:
+      models:
+        spree/payment:
+          one: Pagamento
+          other: Pagamentos

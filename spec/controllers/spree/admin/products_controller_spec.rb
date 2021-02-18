@@ -1,3 +1,5 @@
+# frozen_string_literal: false
+
 require 'spec_helper'
 
 describe Spree::Admin::ProductsController, type: :controller do
@@ -10,13 +12,13 @@ describe Spree::Admin::ProductsController, type: :controller do
       end
 
       before do
-        login_as_enterprise_user [s_managed]
+        controller_login_as_enterprise_user [s_managed]
         spree_post :bulk_update,
                    "products" => [{ "id" => product.id, "name" => "Pine nuts" }]
       end
 
       it "denies access" do
-        expect(response).to redirect_to spree.unauthorized_url
+        expect(response).to redirect_to unauthorized_path
       end
 
       it "does not update any product" do
@@ -38,9 +40,9 @@ describe Spree::Admin::ProductsController, type: :controller do
         )
       end
 
-      before { login_as_enterprise_user([producer]) }
+      before { controller_login_as_enterprise_user([producer]) }
 
-      it 'fails' do
+      it 'succeeds' do
         spree_post :bulk_update,
                    "products" => [
                      {
@@ -50,7 +52,7 @@ describe Spree::Admin::ProductsController, type: :controller do
                      }
                    ]
 
-        expect(response).to have_http_status(400)
+        expect(response).to have_http_status(302)
       end
 
       it 'does not redirect to bulk_products' do
@@ -63,8 +65,8 @@ describe Spree::Admin::ProductsController, type: :controller do
                      }
                    ]
 
-        expect(response).not_to redirect_to(
-          '/api/products/bulk_products?page=1;per_page=500;'
+        expect(response).to redirect_to(
+          '/api/products/bulk_products'
         )
       end
     end
@@ -92,7 +94,7 @@ describe Spree::Admin::ProductsController, type: :controller do
         )
       end
 
-      before { login_as_enterprise_user([producer]) }
+      before { controller_login_as_enterprise_user([producer]) }
 
       it 'does not fail' do
         spree_post :bulk_update,
@@ -134,7 +136,7 @@ describe Spree::Admin::ProductsController, type: :controller do
     }
 
     before do
-      login_as_admin
+      controller_login_as_admin
       create(:stock_location)
     end
 
@@ -174,7 +176,7 @@ describe Spree::Admin::ProductsController, type: :controller do
     let!(:product) { create(:simple_product, supplier: producer) }
 
     before do
-      login_as_enterprise_user [producer]
+      controller_login_as_enterprise_user [producer]
     end
 
     describe "change product supplier" do

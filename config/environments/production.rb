@@ -1,6 +1,8 @@
 Openfoodnetwork::Application.configure do
   # Settings specified here will take precedence over those in config/application.rb
 
+  config.eager_load = true
+
   # Code is not reloaded between requests
   config.cache_classes = true
 
@@ -9,7 +11,7 @@ Openfoodnetwork::Application.configure do
   config.action_controller.perform_caching = true
 
   # Disable Rails's static asset server (Apache or nginx will already do this)
-  config.serve_static_assets = false
+  config.serve_static_files = false
 
   # Compress JavaScripts and CSS
   config.assets.compress = true
@@ -33,21 +35,16 @@ Openfoodnetwork::Application.configure do
   # Use https in email links
   config.action_mailer.default_url_options = { protocol: 'https' }
 
-  # Note: This config no longer works with our new logging strategy
-  # config.log_level = :debug
+  # Set log level (default is :debug in Rails 4)
+  config.log_level = :info
 
-  # Configure logging for Rails 3.2:
-  config.logger = ActiveSupport::TaggedLogging.new(Logger.new(Rails.root.join("log", "#{Rails.env}.log")))
-  config.logger.level = Logger::INFO
-  config.logger.formatter = Logger::Formatter.new
-  config.logger.datetime_format = "%Y-%m-%d %H:%M:%S"
-  # Once we get to Rails 4.0, we can replace the above with:
-  #config.log_formatter = Logger::Formatter.new.tap { |f| f.datetime_format = "%Y-%m-%d %H:%M:%S" }
+  # Configure logging:
+  config.log_formatter = Logger::Formatter.new.tap { |f| f.datetime_format = "%Y-%m-%d %H:%M:%S" }
 
   # Use a different cache store in production
   memcached_value_max_megabytes = ENV.fetch("MEMCACHED_VALUE_MAX_MEGABYTES", 1).to_i
   memcached_value_max_bytes = memcached_value_max_megabytes * 1024 * 1024
-  config.cache_store = :dalli_store, { value_max_bytes: memcached_value_max_bytes }
+  config.cache_store = :mem_cache_store, { value_max_bytes: memcached_value_max_bytes }
 
   # Enable serving of images, stylesheets, and JavaScripts from an asset server
   # config.action_controller.asset_host = "http://assets.example.com"

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 require "date_time_string_validator"
@@ -39,7 +41,7 @@ describe OrderManagement::Reports::EnterpriseFeeSummary::Parameters do
       end
 
       describe "requiring start_at to be before end_at" do
-        let(:now) { Time.zone.now }
+        let(:now) { Time.zone.now.utc }
 
         it "adds error when start_at is after end_at" do
           allow(subject).to receive(:start_at) { now.to_s }

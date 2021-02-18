@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module UIComponentHelper
   def browse_as_medium
     Capybara.current_session.current_window
@@ -54,23 +56,24 @@ module UIComponentHelper
     end
   end
 
+  def close_modal
+    find("a.close-reveal-modal").click
+  end
+
   def have_reset_password
     have_content "An email with instructions on resetting your password has been sent!"
   end
 
   def have_in_cart(name)
-    show_cart
-    within "li.cart" do
+    toggle_cart
+    within ".cart-sidebar" do
       have_content name
     end
   end
 
-  def show_cart
+  def toggle_cart
     page.find("#cart").click
-  end
-
-  def cart_dirty
-    page.find("span.cart-span")[:class].include? 'pure-dirty'
+    sleep 0.3 # Allow 300ms for sidebar animation to finish
   end
 
   def wait_for_ajax

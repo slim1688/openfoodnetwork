@@ -1,7 +1,175 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Spree
   describe Adjustment do
+    let(:order) { build(:order) }
+    let(:adjustment) { Spree::Adjustment.create(label: "Adjustment", amount: 5) }
+
+    describe "scopes" do
+      let!(:arbitrary_adjustment) { create(:adjustment, source: nil, label: "Arbitrary") }
+      let!(:return_authorization_adjustment) { create(:adjustment, source: create(:return_authorization)) }
+
+      it "returns return_authorization adjustments" do
+        expect(Spree::Adjustment.return_authorization.to_a).to eq [return_authorization_adjustment]
+      end
+    end
+
+    context "#update!" do
+      context "when originator present" do
+        let(:originator) { double("originator", update_adjustment: nil) }
+        before do
+          allow(originator).to receive_messages update_amount: true
+          allow(adjustment).to receive_messages originator: originator, label: 'adjustment', amount: 0
+        end
+
+        it "should do nothing when closed" do
+          adjustment.close
+          expect(originator).not_to receive(:update_adjustment)
+          adjustment.update!
+        end
+
+        it "should do nothing when finalized" do
+          adjustment.finalize
+          expect(originator).not_to receive(:update_adjustment)
+          adjustment.update!
+        end
+
+        it "should set the eligibility" do
+          expect(adjustment).to receive(:set_eligibility)
+          adjustment.update!
+        end
+
+        it "should ask the originator to update_adjustment" do
+          expect(originator).to receive(:update_adjustment)
+          adjustment.update!
+        end
+      end
+
+      it "should do nothing when originator is nil" do
+        allow(adjustment).to receive_messages originator: nil
+        expect(adjustment).not_to receive(:amount=)
+        adjustment.update!
+      end
+    end
+
+    context "#eligible? after #set_eligibility" do
+      context "when amount is 0" do
+        before { adjustment.amount = 0 }
+        it "should be eligible if mandatory?" do
+          adjustment.mandatory = true
+          adjustment.set_eligibility
+          expect(adjustment).to be_eligible
+        end
+
+        it "should not be eligible unless mandatory?" do
+          adjustment.mandatory = false
+          adjustment.set_eligibility
+          expect(adjustment).to_not be_eligible
+        end
+      end
+
+      context "when amount is greater than 0" do
+        before { adjustment.amount = 25.00 }
+
+        it "should be eligible if mandatory?" do
+          adjustment.mandatory = true
+          adjustment.set_eligibility
+          expect(adjustment).to be_eligible
+        end
+      end
+    end
+
+    context "#save" do
+      it "should call order#update!" do
+        adjustment = Spree::Adjustment.new(
+          adjustable: order,
+          amount: 10,
+          label: "Foo"
+        )
+        expect(order).to receive(:update!)
+        adjustment.save
+      end
+    end
+
+    context "adjustment state" do
+      let(:adjustment) { create(:adjustment, state: 'open') }
+
+      context "#immutable?" do
+        it "is true when adjustment state isn't open" do
+          adjustment.state = "closed"
+          expect(adjustment).to be_immutable
+          adjustment.state = "finalized"
+          expect(adjustment).to be_immutable
+        end
+
+        it "is false when adjustment state is open" do
+          adjustment.state = "open"
+          expect(adjustment).to_not be_immutable
+        end
+      end
+
+      context "#finalized?" do
+        it "is true when adjustment state is finalized" do
+          adjustment.state = "finalized"
+          expect(adjustment).to be_finalized
+        end
+
+        it "is false when adjustment state isn't finalized" do
+          adjustment.state = "closed"
+          expect(adjustment).to_not be_finalized
+          adjustment.state = "open"
+          expect(adjustment).to_not be_finalized
+        end
+      end
+    end
+
+    context "#display_amount" do
+      before { adjustment.amount = 10.55 }
+
+      context "with display_currency set to true" do
+        before { Spree::Config[:display_currency] = true }
+
+        it "shows the currency" do
+          expect(adjustment.display_amount.to_s).to eq "$10.55 #{Spree::Config[:currency]}"
+        end
+      end
+
+      context "with display_currency set to false" do
+        before { Spree::Config[:display_currency] = false }
+
+        it "does not include the currency" do
+          expect(adjustment.display_amount.to_s).to eq "$10.55"
+        end
+      end
+
+      context "with currency set to JPY" do
+        context "when adjustable is set to an order" do
+          before do
+            allow(order).to receive(:currency) { 'JPY' }
+            adjustment.adjustable = order
+          end
+
+          it "displays in JPY" do
+            expect(adjustment.display_amount.to_s).to eq "¥11"
+          end
+        end
+
+        context "when adjustable is nil" do
+          it "displays in the default currency" do
+            expect(adjustment.display_amount.to_s).to eq "$10.55"
+          end
+        end
+      end
+    end
+
+    context '#currency' do
+      it 'returns the globally configured currency' do
+        expect(adjustment.currency).to eq Spree::Config[:currency]
+      end
+    end
+
     it "has metadata" do
       adjustment = create(:adjustment, metadata: create(:adjustment_metadata))
       expect(adjustment.metadata).to be
@@ -39,7 +207,7 @@ module Spree
         let!(:zone)        { create(:zone_with_member) }
         let!(:order)       { create(:order, bill_address: create(:address)) }
         let!(:line_item)   { create(:line_item, order: order) }
-        let(:tax_rate)     { create(:tax_rate, included_in_price: true, calculator: Calculator::FlatRate.new(preferred_amount: 0.1)) }
+        let(:tax_rate)     { create(:tax_rate, included_in_price: true, calculator: ::Calculator::FlatRate.new(preferred_amount: 0.1)) }
         let(:adjustment)   { line_item.adjustments(:reload).first }
 
         before do
@@ -53,7 +221,7 @@ module Spree
         end
 
         it "does not crash when order data has been updated previously" do
-          order.price_adjustments.first.destroy
+          order.line_item_adjustments.first.destroy
           tax_rate.adjust(order)
         end
       end
@@ -117,7 +285,7 @@ module Spree
           end
 
           it "records 0% tax on shipments when the distributor does not charge sales tax" do
-            order.distributor.update_attributes! charges_sales_tax: false
+            order.distributor.update! charges_sales_tax: false
             order.shipments = [shipment]
 
             expect(order.adjustments.first.included_tax).to eq(0)
@@ -127,7 +295,7 @@ module Spree
 
       describe "EnterpriseFee adjustments" do
         let(:zone)             { create(:zone_with_member) }
-        let(:fee_tax_rate)     { create(:tax_rate, included_in_price: true, calculator: Calculator::DefaultTax.new, zone: zone, amount: 0.1) }
+        let(:fee_tax_rate)     { create(:tax_rate, included_in_price: true, calculator: ::Calculator::DefaultTax.new, zone: zone, amount: 0.1) }
         let(:fee_tax_category) { create(:tax_category, tax_rates: [fee_tax_rate]) }
 
         let(:coordinator) { create(:distributor_enterprise, charges_sales_tax: true) }
@@ -143,7 +311,7 @@ module Spree
           end
 
           context "when enterprise fees are taxed per-order" do
-            let(:enterprise_fee) { create(:enterprise_fee, enterprise: coordinator, tax_category: fee_tax_category, calculator: Calculator::FlatRate.new(preferred_amount: 50.0)) }
+            let(:enterprise_fee) { create(:enterprise_fee, enterprise: coordinator, tax_category: fee_tax_category, calculator: ::Calculator::FlatRate.new(preferred_amount: 50.0)) }
 
             describe "when the tax rate includes the tax in the price" do
               it "records the tax on the enterprise fee adjustments" do
@@ -181,7 +349,7 @@ module Spree
           end
 
           context "when enterprise fees are taxed per-item" do
-            let(:enterprise_fee) { create(:enterprise_fee, enterprise: coordinator, tax_category: fee_tax_category, calculator: Calculator::PerItem.new(preferred_amount: 50.0)) }
+            let(:enterprise_fee) { create(:enterprise_fee, enterprise: coordinator, tax_category: fee_tax_category, calculator: ::Calculator::PerItem.new(preferred_amount: 50.0)) }
 
             describe "when the tax rate includes the tax in the price" do
               it "records the tax on the enterprise fee adjustments" do
@@ -205,8 +373,10 @@ module Spree
         end
 
         context "when enterprise fees inherit their tax_category from the product they are applied to" do
-          let(:product_tax_rate)             { create(:tax_rate, included_in_price: true, calculator: Calculator::DefaultTax.new, zone: zone, amount: 0.2) }
-          let(:product_tax_category)         { create(:tax_category, tax_rates: [product_tax_rate]) }
+          let(:product_tax_rate) {
+            create(:tax_rate, included_in_price: true, calculator: ::Calculator::DefaultTax.new, zone: zone, amount: 0.2)
+          }
+          let(:product_tax_category) { create(:tax_category, tax_rates: [product_tax_rate]) }
 
           before do
             variant.product.update_attribute(:tax_category_id, product_tax_category.id)
@@ -216,7 +386,7 @@ module Spree
           end
 
           context "when enterprise fees are taxed per-order" do
-            let(:enterprise_fee) { create(:enterprise_fee, enterprise: coordinator, inherits_tax_category: true, calculator: Calculator::FlatRate.new(preferred_amount: 50.0)) }
+            let(:enterprise_fee) { create(:enterprise_fee, enterprise: coordinator, inherits_tax_category: true, calculator: ::Calculator::FlatRate.new(preferred_amount: 50.0)) }
 
             describe "when the tax rate includes the tax in the price" do
               it "records no tax on the enterprise fee adjustments" do
@@ -246,7 +416,7 @@ module Spree
           end
 
           context "when enterprise fees are taxed per-item" do
-            let(:enterprise_fee) { create(:enterprise_fee, enterprise: coordinator, inherits_tax_category: true, calculator: Calculator::PerItem.new(preferred_amount: 50.0)) }
+            let(:enterprise_fee) { create(:enterprise_fee, enterprise: coordinator, inherits_tax_category: true, calculator: ::Calculator::PerItem.new(preferred_amount: 50.0)) }
 
             describe "when the tax rate includes the tax in the price" do
               it "records the tax on the enterprise fee adjustments" do
@@ -289,6 +459,66 @@ module Spree
 
     context "extends LocalizedNumber" do
       it_behaves_like "a model using the LocalizedNumber module", [:amount]
+    end
+
+    describe "inclusive and additional taxes" do
+      let!(:zone) { create(:zone_with_member) }
+      let!(:tax_category) { create(:tax_category, name: "Tax Test") }
+      let(:distributor) { create(:distributor_enterprise, charges_sales_tax: true) }
+      let(:order) { create(:order, distributor: distributor) }
+      let(:included_in_price) { true }
+      let(:tax_rate) {
+        create(:tax_rate, included_in_price: included_in_price, zone: zone,
+                          calculator: ::Calculator::FlatRate.new(preferred_amount: 0.1))
+      }
+      let(:product) { create(:product, tax_category: tax_category) }
+      let(:variant) { product.variants.first }
+
+      describe "tax adjustment creation" do
+        before do
+          tax_category.tax_rates << tax_rate
+          allow(order).to receive(:tax_zone) { zone }
+          order.line_items << create(:line_item, variant: variant, quantity: 5)
+        end
+
+        context "with included taxes" do
+          it "records the tax as included" do
+            expect(order.all_adjustments.tax.count).to eq 1
+            expect(order.all_adjustments.tax.first.included).to be true
+          end
+        end
+
+        context "with additional taxes" do
+          let(:included_in_price) { false }
+
+          it "records the tax as additional" do
+            expect(order.all_adjustments.tax.count).to eq 1
+            expect(order.all_adjustments.tax.first.included).to be false
+          end
+        end
+      end
+
+      describe "inclusive and additional scopes" do
+        let(:included) { true }
+        let(:adjustment) {
+          create(:adjustment, adjustable: order, source: order,
+                 originator: tax_rate, included: included)
+        }
+
+        context "when tax is included in price" do
+          it "is returned by the #included scope" do
+            expect(Spree::Adjustment.inclusive).to eq [adjustment]
+          end
+        end
+
+        context "when tax is additional to the price" do
+          let(:included) { false }
+
+          it "is returned by the #additional scope" do
+            expect(Spree::Adjustment.additional).to eq [adjustment]
+          end
+        end
+      end
     end
   end
 end

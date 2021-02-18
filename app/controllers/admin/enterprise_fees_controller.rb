@@ -1,7 +1,7 @@
 module Admin
-  class EnterpriseFeesController < ResourceController
-    before_filter :load_enterprise_fee_set, only: :index
-    before_filter :load_data
+  class EnterpriseFeesController < Admin::ResourceController
+    before_action :load_enterprise_fee_set, only: :index
+    before_action :load_data
 
     def index
       @include_calculators = params[:include_calculators].present?
@@ -27,7 +27,7 @@ module Admin
     end
 
     def bulk_update
-      @enterprise_fee_set = EnterpriseFeeSet.new(params[:enterprise_fee_set])
+      @enterprise_fee_set = Sets::EnterpriseFeeSet.new(enterprise_fee_bulk_params)
 
       if @enterprise_fee_set.save
         redirect_to redirect_path, notice: I18n.t(:enterprise_fees_update_notice)
@@ -40,7 +40,7 @@ module Admin
     private
 
     def load_enterprise_fee_set
-      @enterprise_fee_set = EnterpriseFeeSet.new collection: collection
+      @enterprise_fee_set = Sets::EnterpriseFeeSet.new collection: collection
     end
 
     def load_data
@@ -51,8 +51,8 @@ module Admin
     def collection
       case action
       when :for_order_cycle
-        order_cycle = OrderCycle.find_by_id(params[:order_cycle_id]) if params[:order_cycle_id]
-        coordinator = Enterprise.find_by_id(params[:coordinator_id]) if params[:coordinator_id]
+        order_cycle = OrderCycle.find_by(id: params[:order_cycle_id]) if params[:order_cycle_id]
+        coordinator = Enterprise.find_by(id: params[:coordinator_id]) if params[:coordinator_id]
         order_cycle = OrderCycle.new(coordinator: coordinator) if order_cycle.nil? && coordinator.present?
         enterprises = OpenFoodNetwork::OrderCyclePermissions.new(spree_current_user, order_cycle).visible_enterprises
         EnterpriseFee.for_enterprises(enterprises).order('enterprise_id', 'fee_type', 'name')
@@ -77,6 +77,16 @@ module Admin
       end
 
       main_app.admin_enterprise_fees_path
+    end
+
+    def enterprise_fee_bulk_params
+      params.require(:sets_enterprise_fee_set).permit(
+        collection_attributes: [
+          :id, :enterprise_id, :fee_type, :name, :tax_category_id,
+          :inherits_tax_category, :calculator_type,
+          { calculator_attributes: PermittedAttributes::Calculator.attributes }
+        ]
+      )
     end
   end
 end
